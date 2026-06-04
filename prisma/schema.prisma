@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String @id @default(uuid())
+
+  name        String?
+  lastName    String?
+  avatar      String?
+  email       String  @unique
+  backupEmail String?
+  phone       String?
+  password    String
+  country     String? @default("AR")
+  language    String? @default("es-ES")
+
+  emailConfirm       Boolean @default(false)
+  backupEmailConfirm Boolean @default(false)
+  phoneConfirm       Boolean @default(false)
+
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+
+  session Session[]
+
+  status       UserStatusEnum   @default(ACTIVE)
+  authProvider AuthProviderEnum @default(LOCAL)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Session {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  refreshToken String
+
+  userAgent String?
+  ipAddress String?
+  location  String?
+
+  isActive Boolean @default(true)
+
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userAgent])
+  @@index([ipAddress])
+}
+
+enum UserStatusEnum {
+  ACTIVE
+  INACTIVE
+  DRAFT
+  BLOCKED
+}
+
+enum AuthProviderEnum {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+  APPLE
+}
