@@ -6,18 +6,16 @@ import { envs } from "./config";
 import { UsersModule } from "./modules/users/users.module";
 import { TestModule } from "./modules/test/test.module";
 import { HashModule } from "./modules/hash/hash.module";
-import { HashService } from "./modules/hash/hash.service";
 import { SessionModule } from "./modules/session/session.module";
+import { TokensModule } from './modules/tokens/tokens.module';
 
 @Module({
   imports: [
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => ({
-        return: {
-          ttl: 5000, // Cache items expire after 60 seconds
-          stores: [new KeyvRedis(envs.REDIS_URL)],
-        },
+        ttl: 5000,
+        stores: [new KeyvRedis(envs.REDIS_URL)],
       }),
     }),
     PrismaModule,
@@ -25,8 +23,9 @@ import { SessionModule } from "./modules/session/session.module";
     TestModule,
     HashModule,
     SessionModule,
+    TokensModule,
   ],
   controllers: [],
-  providers: [HashService],
+  providers: [],
 })
 export class AppModule {}
