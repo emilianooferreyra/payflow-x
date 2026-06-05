@@ -8,6 +8,7 @@ import { TestModule } from "./modules/test/test.module";
 import { HashModule } from "./modules/hash/hash.module";
 import { SessionModule } from "./modules/session/session.module";
 import { TokensModule } from './modules/tokens/tokens.module';
+import { EmailsModule } from './modules/emails/emails.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TokensModule } from './modules/tokens/tokens.module';
     HashModule,
     SessionModule,
     TokensModule,
+    EmailsModule,
   ],
   controllers: [],
   providers: [],

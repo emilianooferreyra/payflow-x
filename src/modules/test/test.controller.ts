@@ -3,22 +3,33 @@ import { UsersService } from "../users/users.service";
 import type { CreateUserInterface } from "../users/interfaces/users.interface";
 import { AuthorizationTokenEnum } from "../../commom/enums/authorization-token.enum";
 import { TokensService } from "../tokens/tokens.service";
+import { EmailsService } from "../emails/emails.service";
 
 @Controller("test")
 export class TestController {
   // constructor(private readonly userService: UsersService) {}
-  constructor(private readonly tokens: TokensService) {}
+  // constructor(private readonly tokens: TokensService) {}
+  constructor(private readonly emails: EmailsService) {}
 
   // @Post()
   // async test(@Body() data: CreateUserInterface) {
   //   return await this.userService.create(data);
   // }
 
+  // @Post()
+  // async test() {
+  //   return await this.tokens.generateToken({
+  //     userId: "76053f17-1254-4b60-ad63-46a0d191f5ab",
+  //     type: AuthorizationTokenEnum.CONFIRM_EMAIL,
+  //   });
+  // }
+
   @Post()
   async test() {
-    return await this.tokens.generateToken({
-      userId: "76053f17-1254-4b60-ad63-46a0d191f5ab",
-      type: AuthorizationTokenEnum.CONFIRM_EMAIL,
+    return await this.emails.sendEmail({
+      to: "emilianoferreyraa@gmail.com",
+      subject: "Test email",
+      html: "<h1>This is a test email</h1>",
     });
   }
 }

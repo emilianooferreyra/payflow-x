@@ -15,6 +15,8 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - DATABASE_URL=postgresql://postgres:123456@auth-db:5432/authdb
       - REDIS_URL=${REDIS_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
 
   auth-db:
     container_name: auth-db
