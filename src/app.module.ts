@@ -7,6 +7,7 @@ import { UsersModule } from "./modules/users/users.module";
 import { TestModule } from "./modules/test/test.module";
 import { HashModule } from "./modules/hash/hash.module";
 import { HashService } from "./modules/hash/hash.service";
+import { SessionModule } from "./modules/session/session.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { HashService } from "./modules/hash/hash.service";
     UsersModule,
     TestModule,
     HashModule,
+    SessionModule,
   ],
   controllers: [],
   providers: [HashService],
