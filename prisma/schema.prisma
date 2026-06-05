@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
@@ -22,7 +17,7 @@ model User {
   email       String  @unique
   backupEmail String?
   phone       String?
-  password    String
+  password    String?
   country     String? @default("AR")
   language    String? @default("es-ES")
 

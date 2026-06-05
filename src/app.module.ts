@@ -3,6 +3,10 @@ import { CacheModule } from "@nestjs/cache-manager";
 import { PrismaModule } from "./modules/prisma/prisma.module";
 import KeyvRedis from "@keyv/redis";
 import { envs } from "./config";
+import { UsersModule } from "./modules/users/users.module";
+import { TestModule } from "./modules/test/test.module";
+import { HashModule } from "./modules/hash/hash.module";
+import { HashService } from "./modules/hash/hash.service";
 
 @Module({
   imports: [
@@ -16,8 +20,11 @@ import { envs } from "./config";
       }),
     }),
     PrismaModule,
+    UsersModule,
+    TestModule,
+    HashModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [HashService],
 })
 export class AppModule {}
