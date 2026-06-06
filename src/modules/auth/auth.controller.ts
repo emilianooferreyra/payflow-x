@@ -1,3 +1,4 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
   Body,
   Controller,
@@ -22,6 +23,8 @@ import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { TwoFactorPendingGuard } from "./guards/two-factor-pending.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 
+@ApiTags('Auth')
+@ApiCookieAuth()
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

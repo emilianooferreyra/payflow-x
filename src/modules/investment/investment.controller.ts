@@ -1,3 +1,4 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { InvestmentService } from './investment.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -6,6 +7,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { BuyAssetDto } from './dto/buy-asset.dto'
 import { SellAssetDto } from './dto/sell-asset.dto'
 
+@ApiTags('Investments')
+@ApiCookieAuth()
 @Controller('investments')
 @UseGuards(JwtAuthGuard, KycGuard)
 export class InvestmentController {

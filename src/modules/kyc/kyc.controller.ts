@@ -1,3 +1,4 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { KycService } from './kyc.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -5,6 +6,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { SubmitKycDto } from './dto/submit-kyc.dto'
 import { ReviewKycDto } from './dto/review-kyc.dto'
 
+@ApiTags('KYC')
+@ApiCookieAuth()
 @Controller('kyc')
 @UseGuards(JwtAuthGuard)
 export class KycController {

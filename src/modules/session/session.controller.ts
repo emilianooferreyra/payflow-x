@@ -1,8 +1,11 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, UseGuards } from "@nestjs/common";
 import { SessionService } from "./session.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 
+@ApiTags('Sessions')
+@ApiCookieAuth()
 @Controller("sessions")
 @UseGuards(JwtAuthGuard)
 export class SessionController {

@@ -1,9 +1,12 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common'
 import { ExchangeRateService } from './exchange-rate.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { KycGuard } from '../kyc/guards/kyc.guard'
 import { CurrencyEnum } from '../../generated/prisma/enums'
 
+@ApiTags('Exchange Rates')
+@ApiCookieAuth()
 @Controller('exchange-rates')
 @UseGuards(JwtAuthGuard, KycGuard)
 export class ExchangeRateController {

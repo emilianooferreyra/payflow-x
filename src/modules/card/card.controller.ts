@@ -1,9 +1,12 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { Controller, Get, HttpCode, HttpStatus, Param, Patch, UseGuards } from '@nestjs/common'
 import { CardService } from './card.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { KycGuard } from '../kyc/guards/kyc.guard'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 
+@ApiTags('Cards')
+@ApiCookieAuth()
 @Controller('cards')
 @UseGuards(JwtAuthGuard, KycGuard)
 export class CardController {

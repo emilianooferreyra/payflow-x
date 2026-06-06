@@ -1,3 +1,4 @@
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { WalletService } from './wallet.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -7,6 +8,8 @@ import { DepositDto } from './dto/deposit.dto'
 import { WithdrawDto } from './dto/withdraw.dto'
 import { ExchangeDto } from './dto/exchange.dto'
 
+@ApiTags('Wallet')
+@ApiCookieAuth()
 @Controller('wallet')
 @UseGuards(JwtAuthGuard, KycGuard)
 export class WalletController {
