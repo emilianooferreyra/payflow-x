@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { InvestmentModule } from './modules/investment/investment.module';
+import { CardModule } from './modules/card/card.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { InvestmentModule } from './modules/investment/investment.module';
     WalletModule,
     TransactionModule,
     InvestmentModule,
+    CardModule,
   ],
   controllers: [],
   providers: [],
