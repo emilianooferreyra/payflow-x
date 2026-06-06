@@ -1,10 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
-import { WalletService } from './wallet.service.js'
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js'
-import { CurrentUser } from '../auth/decorators/current-user.decorator.js'
-import { DepositDto } from './dto/deposit.dto.js'
-import { WithdrawDto } from './dto/withdraw.dto.js'
-import { ExchangeDto } from './dto/exchange.dto.js'
+import { WalletService } from './wallet.service'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
+import { DepositDto } from './dto/deposit.dto'
+import { WithdrawDto } from './dto/withdraw.dto'
+import { ExchangeDto } from './dto/exchange.dto'
 
 @Controller('wallet')
 @UseGuards(JwtAuthGuard)

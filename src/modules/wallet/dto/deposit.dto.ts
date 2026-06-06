@@ -1,5 +1,5 @@
 import { IsEnum, IsNumber, IsOptional, IsPositive, IsString, Max } from 'class-validator'
-import { CurrencyEnum } from '../../../generated/prisma/enums.js'
+import { CurrencyEnum } from '../../../generated/prisma/enums'
 
 export class DepositDto {
   @IsEnum(CurrencyEnum)

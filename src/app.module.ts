@@ -11,6 +11,8 @@ import { TokensModule } from './modules/tokens/tokens.module';
 import { EmailsModule } from './modules/emails/emails.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { TransactionModule } from './modules/transaction/transaction.module';
+import { InvestmentModule } from './modules/investment/investment.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { WalletModule } from './modules/wallet/wallet.module';
     EmailsModule,
     AuthModule,
     WalletModule,
+    TransactionModule,
+    InvestmentModule,
   ],
   controllers: [],
   providers: [],

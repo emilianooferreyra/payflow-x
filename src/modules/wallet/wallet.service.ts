@@ -4,8 +4,8 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service.js'
-import { DepositInterface, ExchangeInterface, WithdrawInterface } from './interfaces/wallet.interface.js'
+import { PrismaService } from '../prisma/prisma.service'
+import { DepositInterface, ExchangeInterface, WithdrawInterface } from './interfaces/wallet.interface'
 
 @Injectable()
 export class WalletService {

@@ -1,4 +1,4 @@
-import { CurrencyEnum } from '../../../generated/prisma/enums.js'
+import { CurrencyEnum } from '../../../generated/prisma/enums'
 
 export interface DepositInterface {
   userId: string

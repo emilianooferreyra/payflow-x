@@ -1,5 +1,5 @@
 import { IsEnum, IsNumber, IsPositive, NotEquals } from 'class-validator'
-import { CurrencyEnum } from '../../../generated/prisma/enums.js'
+import { CurrencyEnum } from '../../../generated/prisma/enums'
 
 export class ExchangeDto {
   @IsEnum(CurrencyEnum)
