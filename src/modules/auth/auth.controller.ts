@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -13,6 +14,7 @@ import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
+import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 
 @Controller("auth")
@@ -42,5 +44,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async logout(@CurrentUser() user, @Res({ passthrough: true }) res) {
     return this.authService.logout(user.userId, user.sessionId, res);
+  }
+
+  @Get("google")
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth() {}
+
+  @Get("google/callback")
+  @UseGuards(GoogleAuthGuard)
+  async googleCallback(@CurrentUser() user, @Res({ passthrough: true }) res, @Request() req) {
+    return this.authService.googleLogin(user, res, req.headers["user-agent"], req.ip);
   }
 }

@@ -14,6 +14,9 @@ export const envSchema = z
     RESEND_FROM_EMAIL: z.string().min(1, "RESEND_FROM_EMAIL is required."),
     JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET is required."),
     JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required."),
+    GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required."),
+    GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required."),
+    GOOGLE_CALLBACK_URL: z.string().min(1, "GOOGLE_CALLBACK_URL is required."),
   })
   .passthrough();
 
@@ -35,4 +38,7 @@ export const envs: envType = {
   RESEND_FROM_EMAIL: envParsed.data.RESEND_FROM_EMAIL,
   JWT_ACCESS_SECRET: envParsed.data.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: envParsed.data.JWT_REFRESH_SECRET,
+  GOOGLE_CLIENT_ID: envParsed.data.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: envParsed.data.GOOGLE_CLIENT_SECRET,
+  GOOGLE_CALLBACK_URL: envParsed.data.GOOGLE_CALLBACK_URL,
 };

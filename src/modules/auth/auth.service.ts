@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { randomUUID } from "crypto";
 import { envs } from "../../config";
 import { UsersService } from "../users/users.service";
 import { HashService } from "../hash/hash.service";
 import { SessionService } from "../session/session.service";
+import { AuthProviderEnum } from "../../generated/prisma/enums.js";
 import type { RegisterDto } from "./dto/register.dto";
 import type { LoginDto } from "./dto/login.dto";
 
@@ -116,6 +118,32 @@ export class AuthService {
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       throw new BadRequestException("There was an error refreshing tokens.");
+    }
+  }
+
+  async googleLogin(googleUser: any, res, userAgent?: string, ip?: string) {
+    try {
+      const existing = await this.usersService.findOne({ email: googleUser.email }).catch(() => null);
+
+      if (!existing) {
+        await this.usersService.create({
+          email: googleUser.email,
+          password: await this.hashService.hash(randomUUID()),
+          name: googleUser.name,
+          lastName: googleUser.lastName,
+          avatar: googleUser.avatar,
+          authProvider: AuthProviderEnum.GOOGLE,
+          emailConfirm: true,
+        });
+      }
+
+      const user = await this.usersService.findOne({ email: googleUser.email });
+
+      await this.createSessionWithTokens(user.id, res, userAgent, ip);
+
+      return { user: { id: user.id, email: user.email, name: user.name } };
+    } catch (error) {
+      throw new BadRequestException("There was an error with Google login.");
     }
   }
 
