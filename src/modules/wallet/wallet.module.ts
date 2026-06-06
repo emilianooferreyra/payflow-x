@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common'
 import { WalletController } from './wallet.controller'
 import { WalletService } from './wallet.service'
 import { PrismaModule } from '../prisma/prisma.module'
-import { PassportModule } from '@nestjs/passport'
+import { KycModule } from '../kyc/kyc.module'
 
 @Module({
-  imports: [PrismaModule, PassportModule],
+  imports: [PrismaModule, KycModule],
   controllers: [WalletController],
   providers: [WalletService],
   exports: [WalletService],

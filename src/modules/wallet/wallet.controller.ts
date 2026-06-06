@@ -1,13 +1,14 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { WalletService } from './wallet.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { KycGuard } from '../kyc/guards/kyc.guard'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { DepositDto } from './dto/deposit.dto'
 import { WithdrawDto } from './dto/withdraw.dto'
 import { ExchangeDto } from './dto/exchange.dto'
 
 @Controller('wallet')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, KycGuard)
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 

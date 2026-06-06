@@ -1,12 +1,13 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { InvestmentService } from './investment.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { KycGuard } from '../kyc/guards/kyc.guard'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { BuyAssetDto } from './dto/buy-asset.dto'
 import { SellAssetDto } from './dto/sell-asset.dto'
 
 @Controller('investments')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, KycGuard)
 export class InvestmentController {
   constructor(private readonly investmentService: InvestmentService) {}
 

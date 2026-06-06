@@ -14,6 +14,8 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { InvestmentModule } from './modules/investment/investment.module';
 import { CardModule } from './modules/card/card.module';
+import { ExchangeRateModule } from './modules/exchange-rate/exchange-rate.module';
+import { KycModule } from './modules/kyc/kyc.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { CardModule } from './modules/card/card.module';
     TransactionModule,
     InvestmentModule,
     CardModule,
+    ExchangeRateModule,
+    KycModule,
   ],
   controllers: [],
   providers: [],

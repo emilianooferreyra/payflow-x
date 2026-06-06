@@ -1,10 +1,11 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Patch, UseGuards } from '@nestjs/common'
 import { CardService } from './card.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { KycGuard } from '../kyc/guards/kyc.guard'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 
 @Controller('cards')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, KycGuard)
 export class CardController {
   constructor(private readonly cardService: CardService) {}
 
