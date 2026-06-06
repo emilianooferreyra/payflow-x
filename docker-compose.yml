@@ -17,6 +17,8 @@ services:
       - REDIS_URL=${REDIS_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 
   auth-db:
     container_name: auth-db

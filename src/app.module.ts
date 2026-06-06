@@ -9,6 +9,7 @@ import { HashModule } from "./modules/hash/hash.module";
 import { SessionModule } from "./modules/session/session.module";
 import { TokensModule } from './modules/tokens/tokens.module';
 import { EmailsModule } from './modules/emails/emails.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { EmailsModule } from './modules/emails/emails.module';
     SessionModule,
     TokensModule,
     EmailsModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

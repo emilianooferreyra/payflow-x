@@ -12,6 +12,8 @@ export const envSchema = z
     REDIS_URL: z.string().min(1, "REDIS_URL is required."),
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required."),
     RESEND_FROM_EMAIL: z.string().min(1, "RESEND_FROM_EMAIL is required."),
+    JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET is required."),
+    JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required."),
   })
   .passthrough();
 
@@ -31,4 +33,6 @@ export const envs: envType = {
   REDIS_URL: envParsed.data.REDIS_URL,
   RESEND_API_KEY: envParsed.data.RESEND_API_KEY,
   RESEND_FROM_EMAIL: envParsed.data.RESEND_FROM_EMAIL,
+  JWT_ACCESS_SECRET: envParsed.data.JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET: envParsed.data.JWT_REFRESH_SECRET,
 };
