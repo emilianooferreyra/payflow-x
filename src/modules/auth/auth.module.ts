@@ -6,6 +6,7 @@ import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { RefreshStrategy } from "./strategies/refresh.strategy";
 import { GoogleStrategy } from "./strategies/google.strategy";
+import { TwoFactorPendingStrategy } from "./strategies/two-factor-pending.strategy";
 import { UsersModule } from "../users/users.module";
 import { HashModule } from "../hash/hash.module";
 import { SessionModule } from "../session/session.module";
@@ -23,6 +24,6 @@ import { envs } from "../../config";
     SessionModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, RefreshStrategy, GoogleStrategy, TwoFactorPendingStrategy],
 })
 export class AuthModule {}

@@ -119,6 +119,10 @@ export class UsersService {
     return user;
   }
 
+  async updateTwoFactor(id: string, data: { twoFactorEnabled?: boolean; twoFactorSecret?: string | null }) {
+    await this.prisma.user.update({ where: { id }, data });
+  }
+
   async delete(id: string) {
     await this.findOne({ id });
     await this.prisma.user.delete({ where: { id } });

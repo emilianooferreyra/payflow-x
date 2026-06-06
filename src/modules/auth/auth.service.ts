@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { randomUUID } from "crypto";
+import { generateSecret, generateURI, verify as verifyOTP } from "otplib";
+import * as QRCode from "qrcode";
 import { envs } from "../../config";
 import { UsersService } from "../users/users.service";
 import { HashService } from "../hash/hash.service";
@@ -96,8 +98,24 @@ export class AuthService {
     const isValid = await this.hashService.verify(user.password!, dto.password);
     if (!isValid) throw new UnauthorizedException("Invalid credentials");
 
-    await this.createSessionWithTokens(user.id, res, userAgent, ip);
+    if (user.twoFactorEnabled) {
+      const pendingToken = this.jwtService.sign(
+        { sub: user.id, type: "2fa_pending" },
+        { expiresIn: "5m" },
+      );
 
+      const isProd = process.env.NODE_ENV === "production";
+      res.cookie("two_factor_pending", pendingToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "lax",
+        maxAge: 5 * 60 * 1000,
+      });
+
+      return { requiresTwoFactor: true };
+    }
+
+    await this.createSessionWithTokens(user.id, res, userAgent, ip);
     return { user: { id: user.id, email: user.email, name: user.name } };
   }
 
@@ -145,6 +163,61 @@ export class AuthService {
     } catch (error) {
       throw new BadRequestException("There was an error with Google login.");
     }
+  }
+
+  async generateTwoFactor(userId: string) {
+    const user = await this.usersService.findOne({ id: userId });
+    const secret = generateSecret();
+    const uri = generateURI({ issuer: "PayFlow", label: user.email, secret });
+    const qrCode = await QRCode.toDataURL(uri);
+
+    await this.usersService.updateTwoFactor(userId, { twoFactorSecret: secret });
+
+    return { qrCode, manualEntryKey: secret };
+  }
+
+  async enableTwoFactor(userId: string, code: string) {
+    const user = await this.usersService.findOne({ id: userId });
+
+    if (!user.twoFactorSecret) {
+      throw new BadRequestException("Call /auth/2fa/generate first");
+    }
+
+    const { valid } = await verifyOTP({ token: code, secret: user.twoFactorSecret });
+    if (!valid) throw new UnauthorizedException("Invalid two-factor code");
+
+    await this.usersService.updateTwoFactor(userId, { twoFactorEnabled: true });
+    return { message: "Two-factor authentication enabled" };
+  }
+
+  async disableTwoFactor(userId: string, code: string) {
+    const user = await this.usersService.findOne({ id: userId });
+
+    if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new BadRequestException("Two-factor is not enabled");
+    }
+
+    const { valid } = await verifyOTP({ token: code, secret: user.twoFactorSecret });
+    if (!valid) throw new UnauthorizedException("Invalid two-factor code");
+
+    await this.usersService.updateTwoFactor(userId, { twoFactorEnabled: false, twoFactorSecret: null });
+    return { message: "Two-factor authentication disabled" };
+  }
+
+  async verifyTwoFactor(userId: string, code: string, res, userAgent?: string, ip?: string) {
+    const user = await this.usersService.findOne({ id: userId });
+
+    if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new BadRequestException("Two-factor is not enabled");
+    }
+
+    const { valid } = await verifyOTP({ token: code, secret: user.twoFactorSecret });
+    if (!valid) throw new UnauthorizedException("Invalid two-factor code");
+
+    res.clearCookie("two_factor_pending");
+    await this.createSessionWithTokens(user.id, res, userAgent, ip);
+
+    return { user: { id: user.id, email: user.email, name: user.name } };
   }
 
   async logout(userId: string, sessionId: string, res) {
