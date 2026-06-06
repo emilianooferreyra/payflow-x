@@ -10,6 +10,7 @@ import { SessionModule } from "./modules/session/session.module";
 import { TokensModule } from './modules/tokens/tokens.module';
 import { EmailsModule } from './modules/emails/emails.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthModule } from './modules/auth/auth.module';
     TokensModule,
     EmailsModule,
     AuthModule,
+    WalletModule,
   ],
   controllers: [],
   providers: [],
