@@ -88,7 +88,8 @@ model Wallet {
   currency CurrencyEnum
   balance  Decimal      @default(0) @db.Decimal(18, 2)
 
-  transactions Transaction[]
+  transactions         Transaction[] @relation("WalletTransactions")
+  incomingTransactions Transaction[] @relation("WalletIncomingTransactions")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,7 +101,10 @@ model Wallet {
 model Transaction {
   id       String @id @default(uuid())
   walletId String
-  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  wallet   Wallet  @relation("WalletTransactions", fields: [walletId], references: [id], onDelete: Cascade)
+
+  toWalletId String?
+  toWallet   Wallet? @relation("WalletIncomingTransactions", fields: [toWalletId], references: [id])
 
   type     TransactionTypeEnum
   amount   Decimal               @db.Decimal(18, 2)
@@ -114,6 +118,7 @@ model Transaction {
   createdAt DateTime @default(now())
 
   @@index([walletId])
+  @@index([toWalletId])
   @@index([createdAt])
   @@index([type])
   @@index([status])
@@ -165,10 +170,12 @@ model Card {
   type          CardTypeEnum
   maskedNumber  String
   expiresAt     DateTime
-  cvv           String
-  isActive      Boolean      @default(true)
-  isFrozen      Boolean      @default(false)
-  spendingLimit Decimal?     @db.Decimal(18, 2)
+  network       String?
+  issuer        String?
+  cardToken     String?
+  isActive      Boolean  @default(true)
+  isFrozen      Boolean  @default(false)
+  spendingLimit Decimal? @db.Decimal(18, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -255,4 +262,21 @@ enum KycStatusEnum {
   IN_REVIEW
   APPROVED
   REJECTED
+}
+
+model AuditLog {
+  id     String  @id @default(uuid())
+  userId String?
+
+  action   String
+  entity   String
+  entityId String
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
 }
