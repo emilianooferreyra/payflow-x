@@ -28,7 +28,11 @@ model User {
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
 
-  session Session[]
+  session     Session[]
+  wallets     Wallet[]
+  investments Investment[]
+  cards       Card[]
+  kyc         KycVerification?
 
   status       UserStatusEnum   @default(ACTIVE)
   authProvider AuthProviderEnum @default(LOCAL)
@@ -74,4 +78,181 @@ enum AuthProviderEnum {
   GOOGLE
   FACEBOOK
   APPLE
+}
+
+model Wallet {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  currency CurrencyEnum
+  balance  Decimal      @default(0) @db.Decimal(18, 2)
+
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, currency])
+  @@index([userId])
+}
+
+model Transaction {
+  id       String @id @default(uuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type     TransactionTypeEnum
+  amount   Decimal               @db.Decimal(18, 2)
+  currency CurrencyEnum
+  status   TransactionStatusEnum @default(PENDING)
+
+  description String?
+  category    TransactionCategoryEnum?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+  @@index([createdAt])
+  @@index([type])
+  @@index([status])
+}
+
+model Asset {
+  id     String        @id @default(uuid())
+  symbol String        @unique
+  name   String
+  type   AssetTypeEnum
+
+  currentPrice Decimal @db.Decimal(18, 2)
+  dailyChange  Float   @default(0)
+  logoUrl      String?
+
+  investments Investment[]
+
+  updatedAt DateTime @updatedAt
+
+  @@index([symbol])
+  @@index([type])
+}
+
+model Investment {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  quantity     Decimal @db.Decimal(18, 8)
+  avgBuyPrice  Decimal @db.Decimal(18, 2)
+  currentValue Decimal @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, assetId])
+  @@index([userId])
+  @@index([assetId])
+}
+
+model Card {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          CardTypeEnum
+  maskedNumber  String
+  expiresAt     DateTime
+  cvv           String
+  isActive      Boolean      @default(true)
+  isFrozen      Boolean      @default(false)
+  spendingLimit Decimal?     @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ExchangeRate {
+  id           String       @id @default(uuid())
+  fromCurrency CurrencyEnum
+  toCurrency   CurrencyEnum
+  rate         Decimal      @db.Decimal(18, 6)
+  date         DateTime     @default(now())
+
+  @@index([fromCurrency, toCurrency])
+  @@index([date])
+}
+
+model KycVerification {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status       KycStatusEnum @default(PENDING)
+  documentType String?
+  submittedAt  DateTime?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+enum CurrencyEnum {
+  ARS
+  USD
+  USDT
+  BRL
+}
+
+enum TransactionTypeEnum {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  EXCHANGE
+  INVESTMENT_BUY
+  INVESTMENT_SELL
+}
+
+enum TransactionStatusEnum {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TransactionCategoryEnum {
+  FOOD
+  TRANSPORT
+  ENTERTAINMENT
+  HEALTH
+  UTILITIES
+  SHOPPING
+  INVESTMENT
+  TRANSFER
+  OTHER
+}
+
+enum AssetTypeEnum {
+  STOCK
+  ETF
+  COMMODITY
+  CRYPTO
+}
+
+enum CardTypeEnum {
+  INTERNATIONAL
+  LOCAL
+}
+
+enum KycStatusEnum {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
 }
