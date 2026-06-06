@@ -30,15 +30,13 @@ export class TokensService {
     try {
       const token = this.randomToken();
 
-      return await this.cacheManager.set(
+      await this.cacheManager.set(
         this.getKey({ type, userId }),
-        {
-          userId,
-          type,
-          token,
-        },
+        { userId, type, token },
         ttl,
       );
+
+      return token;
     } catch (error) {
       throw new BadRequestException("There was an error.");
     }
@@ -56,6 +54,7 @@ export class TokensService {
 
       return payload;
     } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
       throw new BadRequestException("There was an error.");
     }
   }

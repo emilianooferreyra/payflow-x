@@ -10,6 +10,8 @@ import { TwoFactorPendingStrategy } from "./strategies/two-factor-pending.strate
 import { UsersModule } from "../users/users.module";
 import { HashModule } from "../hash/hash.module";
 import { SessionModule } from "../session/session.module";
+import { TokensModule } from "../tokens/tokens.module";
+import { EmailsModule } from "../emails/emails.module";
 import { envs } from "../../config";
 
 @Module({
@@ -22,6 +24,8 @@ import { envs } from "../../config";
     UsersModule,
     HashModule,
     SessionModule,
+    TokensModule,
+    EmailsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RefreshStrategy, GoogleStrategy, TwoFactorPendingStrategy],

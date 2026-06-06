@@ -30,7 +30,7 @@ export interface UpdateUserInterface {
   name?: string;
   lastName?: string;
   avatar?: string;
-  email: string;
+  email?: string;
   backupEmail?: string;
   phone?: string;
   password?: string;

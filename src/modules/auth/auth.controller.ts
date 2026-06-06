@@ -13,6 +13,9 @@ import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { VerifyTwoFactorDto } from "./dto/verify-2fa.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { VerifyOtpDto } from "./dto/verify-otp.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
@@ -24,13 +27,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("register")
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res, @Request() req) {
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: any, @Request() req: any) {
     return this.authService.register(dto, res, req.headers["user-agent"], req.ip);
   }
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res, @Request() req) {
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: any, @Request() req: any) {
     return this.authService.login(dto, res, req.headers["user-agent"], req.ip);
   }
 
@@ -46,6 +49,24 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async logout(@CurrentUser() user, @Res({ passthrough: true }) res) {
     return this.authService.logout(user.userId, user.sessionId, res);
+  }
+
+  @Post("forgot-password")
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post("verify-otp")
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto.email, dto.code);
+  }
+
+  @Post("reset-password")
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.code, dto.password);
   }
 
   @Post("2fa/generate")
@@ -72,7 +93,7 @@ export class AuthController {
   @Post("2fa/verify")
   @HttpCode(HttpStatus.OK)
   @UseGuards(TwoFactorPendingGuard)
-  async verify2FA(@CurrentUser() user, @Body() dto: VerifyTwoFactorDto, @Res({ passthrough: true }) res, @Request() req) {
+  async verify2FA(@CurrentUser() user, @Body() dto: VerifyTwoFactorDto, @Res({ passthrough: true }) res: any, @Request() req: any) {
     return this.authService.verifyTwoFactor(user.userId, dto.code, res, req.headers["user-agent"], req.ip);
   }
 
@@ -82,7 +103,7 @@ export class AuthController {
 
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@CurrentUser() user, @Res({ passthrough: true }) res, @Request() req) {
+  async googleCallback(@CurrentUser() user, @Res({ passthrough: true }) res: any, @Request() req: any) {
     return this.authService.googleLogin(user, res, req.headers["user-agent"], req.ip);
   }
 }

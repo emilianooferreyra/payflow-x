@@ -7,6 +7,9 @@ import { envs } from "../../config";
 import { UsersService } from "../users/users.service";
 import { HashService } from "../hash/hash.service";
 import { SessionService } from "../session/session.service";
+import { TokensService } from "../tokens/tokens.service";
+import { EmailsService } from "../emails/emails.service";
+import { AuthorizationTokenEnum } from "../../commom/enums/authorization-token.enum";
 import { AuthProviderEnum } from "../../generated/prisma/enums.js";
 import type { RegisterDto } from "./dto/register.dto";
 import type { LoginDto } from "./dto/login.dto";
@@ -18,6 +21,8 @@ export class AuthService {
     private readonly hashService: HashService,
     private readonly sessionService: SessionService,
     private readonly jwtService: JwtService,
+    private readonly tokensService: TokensService,
+    private readonly emailsService: EmailsService,
   ) {}
 
   private async generateTokens(userId: string, sessionId: string) {
@@ -218,6 +223,56 @@ export class AuthService {
     await this.createSessionWithTokens(user.id, res, userAgent, ip);
 
     return { user: { id: user.id, email: user.email, name: user.name } };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findOne({ email }).catch(() => null);
+
+    if (user) {
+      const code = await this.tokensService.generateToken({
+        userId: user.id,
+        type: AuthorizationTokenEnum.RECOVERY_PASSWORD,
+        ttl: 600000,
+      });
+
+      await this.emailsService.sendEmail({
+        to: email,
+        subject: "PayFlow — Recuperación de contraseña",
+        html: `<p>Tu código de recuperación es: <strong>${code}</strong></p><p>Expira en 10 minutos.</p>`,
+      });
+    }
+
+    return { message: "If the email exists, you will receive a recovery code" };
+  }
+
+  async verifyOtp(email: string, code: string) {
+    const user = await this.usersService.findOne({ email });
+
+    await this.tokensService.validateToken({
+      userId: user.id,
+      type: AuthorizationTokenEnum.RECOVERY_PASSWORD,
+      token: code,
+    });
+
+    return { valid: true };
+  }
+
+  async resetPassword(email: string, code: string, password: string) {
+    const user = await this.usersService.findOne({ email });
+
+    await this.tokensService.validateToken({
+      userId: user.id,
+      type: AuthorizationTokenEnum.RECOVERY_PASSWORD,
+      token: code,
+    });
+
+    await this.usersService.update({ id: user.id, password });
+    await this.tokensService.revokeToken({
+      userId: user.id,
+      type: AuthorizationTokenEnum.RECOVERY_PASSWORD,
+    });
+
+    return { message: "Password updated successfully" };
   }
 
   async logout(userId: string, sessionId: string, res) {
