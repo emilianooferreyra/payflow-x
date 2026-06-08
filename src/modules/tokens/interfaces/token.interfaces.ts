@@ -1,4 +1,4 @@
-import { AuthorizationTokenEnum } from "../../../commom/enums/authorization-token.enum";
+import { AuthorizationTokenEnum } from "../../../common/enums/authorization-token.enum";
 
 export interface CreateTokenInterface {
   userId: string;

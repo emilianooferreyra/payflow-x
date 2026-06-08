@@ -1,7 +1,7 @@
-import { IsIn, IsString } from 'class-validator'
+import { IsIn, IsString } from "class-validator";
 
 export class SubmitKycDto {
   @IsString()
-  @IsIn(['DNI', 'PASSPORT', 'DRIVER_LICENSE'])
-  documentType!: string
+  @IsIn(["DNI", "PASSPORT", "DRIVER_LICENSE"])
+  documentType!: string;
 }

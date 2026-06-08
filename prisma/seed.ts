@@ -56,7 +56,7 @@ async function main() {
   console.log(`📈 USD/ARS: ${usdToArs.toFixed(2)} | USD/BRL: ${usdToBrl.toFixed(2)}\n`)
 
   // ── Clean existing demo data ──────────────────────────────────────────────
-  const existing = await prisma.user.findUnique({ where: { email: 'demo@payflow.com' } })
+  const existing = await prisma.user.findUnique({ where: { email: 'emiliano@craftbeats.dev' } })
   if (existing) {
     await prisma.auditLog.deleteMany({ where: { userId: existing.id } })
     await prisma.investment.deleteMany({ where: { userId: existing.id } })
@@ -67,6 +67,8 @@ async function main() {
     await prisma.user.delete({ where: { id: existing.id } })
     console.log('🧹 Cleaned existing demo user\n')
   }
+  // Delete all investments before assets to avoid FK constraint
+  await prisma.investment.deleteMany({})
   await prisma.exchangeRate.deleteMany({})
   await prisma.asset.deleteMany({})
 
@@ -75,10 +77,10 @@ async function main() {
 
   const user = await prisma.user.create({
     data: {
-      email: 'demo@payflow.com',
+      email: 'emiliano@craftbeats.dev',
       password: passwordHash,
-      name: 'Nicolás',
-      lastName: 'Rodríguez',
+      name: 'Emiliano',
+      lastName: 'Ferreyra',
       country: 'AR',
       language: 'es-ES',
       emailConfirm: true,
@@ -151,7 +153,7 @@ async function main() {
     amount: 2000,
     currency: 'USD',
     status: 'COMPLETED',
-    description: 'Pago cliente — Proyecto web (fase 1)',
+    description: 'Acme Creative Co. · Invoice INV-2026-0005',
     category: 'TRANSFER',
     createdAt: daysAgo(89),
   })
@@ -217,7 +219,7 @@ async function main() {
     amount: 3500,
     currency: 'USD',
     status: 'COMPLETED',
-    description: 'Pago cliente — Retainer mensual',
+    description: 'TechForge Solutions · Invoice INV-2026-0009',
     category: 'TRANSFER',
     createdAt: daysAgo(59),
   })
@@ -293,7 +295,7 @@ async function main() {
     amount: 2800,
     currency: 'USD',
     status: 'COMPLETED',
-    description: 'Pago cliente — Proyecto web (fase 2)',
+    description: 'Nova Digital · Invoice INV-2026-0012',
     category: 'TRANSFER',
     createdAt: daysAgo(28),
   })
@@ -496,7 +498,7 @@ async function main() {
   console.log('✅ Audit log: 7 key events\n')
 
   console.log('🎉 Seed completed!')
-  console.log('   📧 demo@payflow.com  /  Demo1234!')
+  console.log('   📧 emiliano@craftbeats.dev  /  Demo1234!')
   console.log(`   💵 USD $1,842.50  |  ARS $415,000  |  USDT $1,200`)
   console.log(`   📊 Portfolio: ~$2,778 in stocks`)
   console.log(`   📈 90 days of daily yield accruals`)

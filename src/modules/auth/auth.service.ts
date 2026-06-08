@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { randomUUID } from "crypto";
 import { generateSecret, generateURI, verify as verifyOTP } from "otplib";
@@ -9,7 +13,7 @@ import { HashService } from "../hash/hash.service";
 import { SessionService } from "../session/session.service";
 import { TokensService } from "../tokens/tokens.service";
 import { EmailsService } from "../emails/emails.service";
-import { AuthorizationTokenEnum } from "../../commom/enums/authorization-token.enum";
+import { AuthorizationTokenEnum } from "../../common/enums/authorization-token.enum";
 import { AuthProviderEnum } from "../../generated/prisma/enums.js";
 import type { RegisterDto } from "./dto/register.dto";
 import type { LoginDto } from "./dto/login.dto";
@@ -61,7 +65,12 @@ export class AuthService {
     res.clearCookie("refresh_token");
   }
 
-  private async createSessionWithTokens(userId: string, res, userAgent?: string, ip?: string) {
+  private async createSessionWithTokens(
+    userId: string,
+    res,
+    userAgent?: string,
+    ip?: string,
+  ) {
     try {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
@@ -126,15 +135,25 @@ export class AuthService {
 
   async refresh(userId: string, sessionId: string, refreshToken: string, res) {
     try {
-      const session = await this.sessionService.findOne({ id: sessionId, userId });
+      const session = await this.sessionService.findOne({
+        id: sessionId,
+        userId,
+      });
 
-      const isValid = await this.hashService.verify(session.refreshToken, refreshToken);
+      const isValid = await this.hashService.verify(
+        session.refreshToken,
+        refreshToken,
+      );
       if (!isValid) throw new UnauthorizedException("Invalid refresh token");
 
       const tokens = await this.generateTokens(userId, sessionId);
       const hashedRefresh = await this.hashService.hash(tokens.refreshToken);
 
-      await this.sessionService.update({ id: sessionId, userId, refreshToken: hashedRefresh });
+      await this.sessionService.update({
+        id: sessionId,
+        userId,
+        refreshToken: hashedRefresh,
+      });
       this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
 
       return { message: "Tokens refreshed" };
@@ -146,7 +165,9 @@ export class AuthService {
 
   async googleLogin(googleUser: any, res, userAgent?: string, ip?: string) {
     try {
-      const existing = await this.usersService.findOne({ email: googleUser.email }).catch(() => null);
+      const existing = await this.usersService
+        .findOne({ email: googleUser.email })
+        .catch(() => null);
 
       if (!existing) {
         await this.usersService.create({
@@ -176,7 +197,9 @@ export class AuthService {
     const uri = generateURI({ issuer: "PayFlow", label: user.email, secret });
     const qrCode = await QRCode.toDataURL(uri);
 
-    await this.usersService.updateTwoFactor(userId, { twoFactorSecret: secret });
+    await this.usersService.updateTwoFactor(userId, {
+      twoFactorSecret: secret,
+    });
 
     return { qrCode, manualEntryKey: secret };
   }
@@ -188,7 +211,10 @@ export class AuthService {
       throw new BadRequestException("Call /auth/2fa/generate first");
     }
 
-    const { valid } = await verifyOTP({ token: code, secret: user.twoFactorSecret });
+    const { valid } = await verifyOTP({
+      token: code,
+      secret: user.twoFactorSecret,
+    });
     if (!valid) throw new UnauthorizedException("Invalid two-factor code");
 
     await this.usersService.updateTwoFactor(userId, { twoFactorEnabled: true });
@@ -202,21 +228,36 @@ export class AuthService {
       throw new BadRequestException("Two-factor is not enabled");
     }
 
-    const { valid } = await verifyOTP({ token: code, secret: user.twoFactorSecret });
+    const { valid } = await verifyOTP({
+      token: code,
+      secret: user.twoFactorSecret,
+    });
     if (!valid) throw new UnauthorizedException("Invalid two-factor code");
 
-    await this.usersService.updateTwoFactor(userId, { twoFactorEnabled: false, twoFactorSecret: null });
+    await this.usersService.updateTwoFactor(userId, {
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+    });
     return { message: "Two-factor authentication disabled" };
   }
 
-  async verifyTwoFactor(userId: string, code: string, res, userAgent?: string, ip?: string) {
+  async verifyTwoFactor(
+    userId: string,
+    code: string,
+    res,
+    userAgent?: string,
+    ip?: string,
+  ) {
     const user = await this.usersService.findOne({ id: userId });
 
     if (!user.twoFactorEnabled || !user.twoFactorSecret) {
       throw new BadRequestException("Two-factor is not enabled");
     }
 
-    const { valid } = await verifyOTP({ token: code, secret: user.twoFactorSecret });
+    const { valid } = await verifyOTP({
+      token: code,
+      secret: user.twoFactorSecret,
+    });
     if (!valid) throw new UnauthorizedException("Invalid two-factor code");
 
     res.clearCookie("two_factor_pending");

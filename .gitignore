@@ -3,6 +3,11 @@
 /node_modules
 /build
 /docs
+/openspec
+/.agents
+/.claude
+/.opencode
+skills-lock.json
 
 # Docker volumes
 /postgres

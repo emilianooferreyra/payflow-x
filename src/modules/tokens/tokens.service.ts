@@ -10,7 +10,7 @@ import {
   PayloadTokenInterface,
   RevokeTokenInterface,
 } from "./interfaces/token.interfaces";
-import { AuthorizationTokenEnum } from "../../commom/enums/authorization-token.enum";
+import { AuthorizationTokenEnum } from "../../common/enums/authorization-token.enum";
 
 @Injectable()
 export class TokensService {

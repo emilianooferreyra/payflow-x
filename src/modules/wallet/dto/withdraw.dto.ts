@@ -1,15 +1,21 @@
-import { IsEnum, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator'
-import { CurrencyEnum } from '../../../generated/prisma/enums'
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from "class-validator";
+import { CurrencyEnum } from "../../../generated/prisma/enums";
 
 export class WithdrawDto {
   @IsEnum(CurrencyEnum)
-  currency!: CurrencyEnum
+  currency!: CurrencyEnum;
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
-  amount!: number
+  amount!: number;
 
   @IsString()
   @IsOptional()
-  description?: string
+  description?: string;
 }

@@ -46,7 +46,10 @@ async function bootstrap() {
     .addCookieAuth("access_token")
     .addTag("Auth", "Registration, login, 2FA and password recovery")
     .addTag("Sessions", "Active session management")
-    .addTag("Wallet", "Multi-currency wallets, deposits, withdrawals and exchanges")
+    .addTag(
+      "Wallet",
+      "Multi-currency wallets, deposits, withdrawals and exchanges",
+    )
     .addTag("Transactions", "Transaction history and details")
     .addTag("Investments", "Asset catalog and portfolio management")
     .addTag("Cards", "Virtual card management")

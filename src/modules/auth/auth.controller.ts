@@ -1,4 +1,4 @@
-import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
+import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
 import {
   Body,
   Controller,
@@ -10,6 +10,7 @@ import {
   Res,
   UseGuards,
 } from "@nestjs/common";
+import type { Response } from "express";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -23,20 +24,33 @@ import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { TwoFactorPendingGuard } from "./guards/two-factor-pending.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 
-@ApiTags('Auth')
+@ApiTags("Auth")
 @ApiCookieAuth()
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("register")
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: any, @Request() req: any) {
-    return this.authService.register(dto, res, req.headers["user-agent"], req.ip);
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+    @Request() req: any,
+  ) {
+    return this.authService.register(
+      dto,
+      res,
+      req.headers["user-agent"],
+      req.ip,
+    );
   }
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: any, @Request() req: any) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+    @Request() req: any,
+  ) {
     return this.authService.login(dto, res, req.headers["user-agent"], req.ip);
   }
 
@@ -44,12 +58,17 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(RefreshTokenGuard)
   async refresh(@CurrentUser() user, @Res({ passthrough: true }) res) {
-    return this.authService.refresh(user.userId, user.sessionId, user.refreshToken, res);
+    return this.authService.refresh(
+      user.userId,
+      user.sessionId,
+      user.refreshToken,
+      res,
+    );
   }
 
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(RefreshTokenGuard)
   async logout(@CurrentUser() user, @Res({ passthrough: true }) res) {
     return this.authService.logout(user.userId, user.sessionId, res);
   }
@@ -96,8 +115,19 @@ export class AuthController {
   @Post("2fa/verify")
   @HttpCode(HttpStatus.OK)
   @UseGuards(TwoFactorPendingGuard)
-  async verify2FA(@CurrentUser() user, @Body() dto: VerifyTwoFactorDto, @Res({ passthrough: true }) res: any, @Request() req: any) {
-    return this.authService.verifyTwoFactor(user.userId, dto.code, res, req.headers["user-agent"], req.ip);
+  async verify2FA(
+    @CurrentUser() user,
+    @Body() dto: VerifyTwoFactorDto,
+    @Res({ passthrough: true }) res: Response,
+    @Request() req: any,
+  ) {
+    return this.authService.verifyTwoFactor(
+      user.userId,
+      dto.code,
+      res,
+      req.headers["user-agent"],
+      req.ip,
+    );
   }
 
   @Get("google")
@@ -106,7 +136,18 @@ export class AuthController {
 
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@CurrentUser() user, @Res({ passthrough: true }) res: any, @Request() req: any) {
-    return this.authService.googleLogin(user, res, req.headers["user-agent"], req.ip);
+  async googleCallback(
+    @CurrentUser() user,
+    @Res() res: Response,
+    @Request() req: any,
+  ) {
+    await this.authService.googleLogin(
+      user,
+      res,
+      req.headers["user-agent"],
+      req.ip,
+    );
+    const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
+    return res.redirect(`${frontendUrl}/dashboard`);
   }
 }

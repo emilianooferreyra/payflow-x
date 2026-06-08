@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { UsersService } from "../users/users.service";
 import type { CreateUserInterface } from "../users/interfaces/users.interface";
-import { AuthorizationTokenEnum } from "../../commom/enums/authorization-token.enum";
+import { AuthorizationTokenEnum } from "../../common/enums/authorization-token.enum";
 import { TokensService } from "../tokens/tokens.service";
 import { EmailsService } from "../emails/emails.service";
 

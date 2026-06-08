@@ -4,7 +4,10 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { envs } from "../../../config";
 
 @Injectable()
-export class TwoFactorPendingStrategy extends PassportStrategy(Strategy, "two-factor-pending") {
+export class TwoFactorPendingStrategy extends PassportStrategy(
+  Strategy,
+  "two-factor-pending",
+) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([

@@ -28,6 +28,12 @@ import { envs } from "../../config";
     EmailsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshStrategy, GoogleStrategy, TwoFactorPendingStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    RefreshStrategy,
+    GoogleStrategy,
+    TwoFactorPendingStrategy,
+  ],
 })
 export class AuthModule {}

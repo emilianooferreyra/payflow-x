@@ -1,40 +1,48 @@
-import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
-import { WalletService } from './wallet.service'
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
-import { KycGuard } from '../kyc/guards/kyc.guard'
-import { CurrentUser } from '../auth/decorators/current-user.decorator'
-import { DepositDto } from './dto/deposit.dto'
-import { WithdrawDto } from './dto/withdraw.dto'
-import { ExchangeDto } from './dto/exchange.dto'
+import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
+import { WalletService } from "./wallet.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { KycGuard } from "../kyc/guards/kyc.guard";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { DepositDto } from "./dto/deposit.dto";
+import { WithdrawDto } from "./dto/withdraw.dto";
+import { ExchangeDto } from "./dto/exchange.dto";
 
-@ApiTags('Wallet')
+@ApiTags("Wallet")
 @ApiCookieAuth()
-@Controller('wallet')
+@Controller("wallet")
 @UseGuards(JwtAuthGuard, KycGuard)
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
   @Get()
   async getWallets(@CurrentUser() user) {
-    return this.walletService.getWallets(user.userId)
+    return this.walletService.getWallets(user.userId);
   }
 
-  @Post('deposit')
+  @Post("deposit")
   @HttpCode(HttpStatus.CREATED)
   async deposit(@CurrentUser() user, @Body() dto: DepositDto) {
-    return this.walletService.deposit({ userId: user.userId, ...dto })
+    return this.walletService.deposit({ userId: user.userId, ...dto });
   }
 
-  @Post('withdraw')
+  @Post("withdraw")
   @HttpCode(HttpStatus.CREATED)
   async withdraw(@CurrentUser() user, @Body() dto: WithdrawDto) {
-    return this.walletService.withdraw({ userId: user.userId, ...dto })
+    return this.walletService.withdraw({ userId: user.userId, ...dto });
   }
 
-  @Post('exchange')
+  @Post("exchange")
   @HttpCode(HttpStatus.CREATED)
   async exchange(@CurrentUser() user, @Body() dto: ExchangeDto) {
-    return this.walletService.exchange({ userId: user.userId, ...dto })
+    return this.walletService.exchange({ userId: user.userId, ...dto });
   }
 }
