@@ -6,47 +6,60 @@ jest.mock("argon2");
 
 describe("HashService", () => {
   let service: HashService;
-  const mockedArgon2 = jest.mocked(argon2);
+  let mockedArgon2: jest.Mocked<typeof argon2>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [HashService],
     }).compile();
 
     service = module.get<HashService>(HashService);
+    mockedArgon2 = jest.mocked(argon2);
+  });
+
+  beforeEach(() => {
     jest.resetAllMocks();
   });
 
   describe("hash", () => {
-    it("should hash a password and return a non-empty string different from input", async () => {
-      const input = "plainPassword";
-      const hashed = "hashed-value";
-      mockedArgon2.hash.mockResolvedValue(hashed);
+    it("should call argon2.hash with the given input", async () => {
+      mockedArgon2.hash.mockResolvedValue("hashed-value");
 
-      const result = await service.hash(input);
+      const result = await service.hash("test");
 
-      expect(result).toBe(hashed);
-      expect(result).not.toBe(input);
-      expect(mockedArgon2.hash).toHaveBeenCalledWith(input);
+      expect(result).toBe("hashed-value");
+      expect(mockedArgon2.hash).toHaveBeenCalledWith("test");
+    });
+
+    it("should propagate argon2 errors", async () => {
+      const error = new Error("argon2 error");
+      mockedArgon2.hash.mockRejectedValue(error);
+
+      await expect(service.hash("anything")).rejects.toThrow("argon2 error");
     });
   });
 
   describe("verify", () => {
-    it("should return true for matching password and hash", async () => {
+    it("should call argon2.verify with hash then password", async () => {
       mockedArgon2.verify.mockResolvedValue(true);
 
-      const result = await service.verify("password", "hashed");
+      const result = await service.verify("hash", "password");
 
       expect(result).toBe(true);
-      expect(mockedArgon2.verify).toHaveBeenCalledWith("password", "hashed");
+      expect(mockedArgon2.verify).toHaveBeenCalledWith("hash", "password");
     });
 
-    it("should return false for non-matching password and hash", async () => {
+    it("should return false when argon2.verify returns false", async () => {
       mockedArgon2.verify.mockResolvedValue(false);
 
-      const result = await service.verify("wrong", "hashed");
+      await expect(service.verify("hash", "wrong")).resolves.toBe(false);
+    });
 
-      expect(result).toBe(false);
+    it("should propagate argon2 errors", async () => {
+      const error = new Error("verify error");
+      mockedArgon2.verify.mockRejectedValue(error);
+
+      await expect(service.verify("hash", "pass")).rejects.toThrow("verify error");
     });
   });
 });

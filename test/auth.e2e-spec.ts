@@ -47,7 +47,6 @@ describe("Auth (e2e)", () => {
     );
     app.useGlobalFilters(new GlobalExceptionFilter());
 
-    app.set("trust proxy", "loopback");
     await app.init();
 
     jwtService = moduleFixture.get(JwtService);
