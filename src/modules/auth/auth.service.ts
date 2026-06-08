@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -20,6 +21,7 @@ import type { LoginDto } from "./dto/login.dto";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly hashService: HashService,
@@ -96,6 +98,7 @@ export class AuthService {
 
       return session;
     } catch (error) {
+      this.logger.warn(`Session creation failed for user ${userId}: ${(error as Error).message}`);
       throw new BadRequestException("There was an error creating the session.");
     }
   }
@@ -159,6 +162,7 @@ export class AuthService {
       return { message: "Tokens refreshed" };
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
+      this.logger.warn(`Token refresh failed for user ${userId}: ${(error as Error).message}`);
       throw new BadRequestException("There was an error refreshing tokens.");
     }
   }
@@ -187,6 +191,7 @@ export class AuthService {
 
       return { user: { id: user.id, email: user.email, name: user.name } };
     } catch (error) {
+      this.logger.warn(`Google login failed: ${(error as Error).message}`);
       throw new BadRequestException("There was an error with Google login.");
     }
   }
@@ -322,6 +327,7 @@ export class AuthService {
       this.clearTokenCookies(res);
       return { message: "Logged out successfully" };
     } catch (error) {
+      this.logger.warn(`Logout failed for user ${userId}: ${(error as Error).message}`);
       throw new BadRequestException("There was an error logging out.");
     }
   }

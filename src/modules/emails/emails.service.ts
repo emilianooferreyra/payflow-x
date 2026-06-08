@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Resend } from "resend";
 import { envs } from "../../config";
 import { EmailInterface } from "./interfaces/email.interfaces";
 
 @Injectable()
 export class EmailsService {
+  private readonly logger = new Logger(EmailsService.name);
   private readonly resend: Resend;
 
   constructor() {
@@ -20,7 +21,8 @@ export class EmailsService {
         html,
       });
     } catch (error) {
-      throw new BadRequestException("There was an error.");
+      this.logger.warn(`Failed to send email to ${to} (${subject}): ${(error as Error).message}`);
+      throw new BadRequestException(`Failed to send email to ${to}`);
     }
   }
 
@@ -35,7 +37,8 @@ export class EmailsService {
         })),
       );
     } catch (error) {
-      throw new BadRequestException("There was an error.");
+      this.logger.warn(`Failed to send batch email (${emails.length} recipients): ${(error as Error).message}`);
+      throw new BadRequestException("Failed to send batch email");
     }
   }
 }

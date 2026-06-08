@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import {
@@ -14,6 +15,7 @@ import { AuthorizationTokenEnum } from "../../common/enums/authorization-token.e
 
 @Injectable()
 export class TokensService {
+  private readonly logger = new Logger(TokensService.name);
   private readonly randomToken = () =>
     Math.floor(100000 + Math.random() * 900000).toString();
   private readonly getKey = ({
@@ -38,7 +40,8 @@ export class TokensService {
 
       return token;
     } catch (error) {
-      throw new BadRequestException("There was an error.");
+      this.logger.warn(`Failed to generate ${type} token for user ${userId}: ${(error as Error).message}`);
+      throw new BadRequestException(`Failed to generate ${type} token`);
     }
   }
 
@@ -55,7 +58,8 @@ export class TokensService {
       return payload;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
-      throw new BadRequestException("There was an error.");
+      this.logger.warn(`Failed to validate ${type} token for user ${userId}: ${(error as Error).message}`);
+      throw new BadRequestException(`Failed to validate ${type} token`);
     }
   }
 
@@ -65,7 +69,8 @@ export class TokensService {
 
       return true;
     } catch (error) {
-      throw new BadRequestException("There was an error.");
+      this.logger.warn(`Failed to revoke ${type} token for user ${userId}: ${(error as Error).message}`);
+      throw new BadRequestException(`Failed to revoke ${type} token`);
     }
   }
 }
