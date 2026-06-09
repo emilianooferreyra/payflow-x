@@ -1,5 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { INestApplication, ValidationPipe, VersioningType } from "@nestjs/common";
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from "@nestjs/common";
 import request from "supertest";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -43,7 +47,11 @@ describe("Auth (e2e)", () => {
     app.enableCors({ origin: "*", credentials: true });
 
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     app.useGlobalFilters(new GlobalExceptionFilter());
 
@@ -65,7 +73,9 @@ describe("Auth (e2e)", () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
+    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
+      fn(mockPrisma),
+    );
   });
 
   function sessionMocks() {
@@ -113,15 +123,23 @@ describe("Auth (e2e)", () => {
 
       const res = await request(app.getHttpServer())
         .post(`${BASE}/register`)
-        .send({ email: "test@test.com", password: "Password123!", name: "Test" })
+        .send({
+          email: "test@test.com",
+          password: "Password123!",
+          name: "Test",
+        })
         .expect(201);
 
       expect(res.headers["set-cookie"]).toBeDefined();
       const cookies = Array.isArray(res.headers["set-cookie"])
         ? res.headers["set-cookie"]
         : [res.headers["set-cookie"]];
-      expect(cookies.some((c: string) => c.startsWith("access_token="))).toBe(true);
-      expect(cookies.some((c: string) => c.startsWith("refresh_token="))).toBe(true);
+      expect(cookies.some((c: string) => c.startsWith("access_token="))).toBe(
+        true,
+      );
+      expect(cookies.some((c: string) => c.startsWith("refresh_token="))).toBe(
+        true,
+      );
     });
   });
 
@@ -228,7 +246,9 @@ describe("Auth (e2e)", () => {
       const cookies = Array.isArray(res.headers["set-cookie"])
         ? res.headers["set-cookie"]
         : [res.headers["set-cookie"]];
-      expect(cookies.some((c: string) => c.includes("access_token=;"))).toBe(true);
+      expect(cookies.some((c: string) => c.includes("access_token=;"))).toBe(
+        true,
+      );
     });
   });
 });

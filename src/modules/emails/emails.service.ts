@@ -21,7 +21,9 @@ export class EmailsService {
         html,
       });
     } catch (error) {
-      this.logger.warn(`Failed to send email to ${to} (${subject}): ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to send email to ${to} (${subject}): ${(error as Error).message}`,
+      );
       throw new BadRequestException(`Failed to send email to ${to}`);
     }
   }
@@ -37,7 +39,9 @@ export class EmailsService {
         })),
       );
     } catch (error) {
-      this.logger.warn(`Failed to send batch email (${emails.length} recipients): ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to send batch email (${emails.length} recipients): ${(error as Error).message}`,
+      );
       throw new BadRequestException("Failed to send batch email");
     }
   }

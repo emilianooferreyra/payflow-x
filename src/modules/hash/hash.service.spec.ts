@@ -59,7 +59,9 @@ describe("HashService", () => {
       const error = new Error("verify error");
       mockedArgon2.verify.mockRejectedValue(error);
 
-      await expect(service.verify("hash", "pass")).rejects.toThrow("verify error");
+      await expect(service.verify("hash", "pass")).rejects.toThrow(
+        "verify error",
+      );
     });
   });
 });

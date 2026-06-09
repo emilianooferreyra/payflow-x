@@ -1,6 +1,13 @@
-import { NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import {
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
 import { WalletService } from "./wallet.service";
-import { mockPrisma, createTestingModule, makeWallet } from "../../common/testing";
+import {
+  mockPrisma,
+  createTestingModule,
+  makeWallet,
+} from "../../common/testing";
 
 describe("WalletService", () => {
   let service: WalletService;
@@ -9,7 +16,9 @@ describe("WalletService", () => {
     const module = await createTestingModule([WalletService]);
     service = module.get<WalletService>(WalletService);
     jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
+    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
+      fn(mockPrisma),
+    );
   });
 
   describe("getWallets", () => {
@@ -47,7 +56,7 @@ describe("WalletService", () => {
 
       const result = await service.deposit({
         userId: wallet.userId,
-        currency: "ARS" as any,
+        currency: "ARS",
         amount: 500,
       });
 
@@ -63,7 +72,11 @@ describe("WalletService", () => {
       mockPrisma.wallet.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.deposit({ userId: "invalid", currency: "ARS" as any, amount: 500 }),
+        service.deposit({
+          userId: "invalid",
+          currency: "ARS" as any,
+          amount: 500,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -84,7 +97,7 @@ describe("WalletService", () => {
 
       const result = await service.withdraw({
         userId: wallet.userId,
-        currency: "ARS" as any,
+        currency: "ARS",
         amount: 500,
       });
 
@@ -96,7 +109,11 @@ describe("WalletService", () => {
       mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
 
       await expect(
-        service.withdraw({ userId: wallet.userId, currency: "ARS" as any, amount: 500 }),
+        service.withdraw({
+          userId: wallet.userId,
+          currency: "ARS" as any,
+          amount: 500,
+        }),
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
@@ -104,7 +121,11 @@ describe("WalletService", () => {
       mockPrisma.wallet.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.withdraw({ userId: "invalid", currency: "ARS" as any, amount: 500 }),
+        service.withdraw({
+          userId: "invalid",
+          currency: "ARS" as any,
+          amount: 500,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -114,8 +135,10 @@ describe("WalletService", () => {
       const sourceWallet = makeWallet({ balance: 1000, currency: "ARS" });
       const targetWallet = makeWallet({ balance: 0, currency: "USD" });
       mockPrisma.wallet.findUnique.mockImplementation(({ where }: any) => {
-        if (where?.userId_currency?.currency === "ARS") return Promise.resolve(sourceWallet);
-        if (where?.userId_currency?.currency === "USD") return Promise.resolve(targetWallet);
+        if (where?.userId_currency?.currency === "ARS")
+          return Promise.resolve(sourceWallet);
+        if (where?.userId_currency?.currency === "USD")
+          return Promise.resolve(targetWallet);
         return Promise.resolve(null);
       });
       mockPrisma.exchangeRate.findFirst.mockResolvedValue({
@@ -137,8 +160,8 @@ describe("WalletService", () => {
 
       const result = await service.exchange({
         userId: sourceWallet.userId,
-        fromCurrency: "ARS" as any,
-        toCurrency: "USD" as any,
+        fromCurrency: "ARS",
+        toCurrency: "USD",
         amount: 500,
       });
 

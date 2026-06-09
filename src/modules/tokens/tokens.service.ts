@@ -40,7 +40,9 @@ export class TokensService {
 
       return token;
     } catch (error) {
-      this.logger.warn(`Failed to generate ${type} token for user ${userId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to generate ${type} token for user ${userId}: ${(error as Error).message}`,
+      );
       throw new BadRequestException(`Failed to generate ${type} token`);
     }
   }
@@ -58,7 +60,9 @@ export class TokensService {
       return payload;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
-      this.logger.warn(`Failed to validate ${type} token for user ${userId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to validate ${type} token for user ${userId}: ${(error as Error).message}`,
+      );
       throw new BadRequestException(`Failed to validate ${type} token`);
     }
   }
@@ -69,7 +73,9 @@ export class TokensService {
 
       return true;
     } catch (error) {
-      this.logger.warn(`Failed to revoke ${type} token for user ${userId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to revoke ${type} token for user ${userId}: ${(error as Error).message}`,
+      );
       throw new BadRequestException(`Failed to revoke ${type} token`);
     }
   }

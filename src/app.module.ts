@@ -24,7 +24,7 @@ import { KycModule } from "./modules/kyc/kyc.module";
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     CacheModule.registerAsync({
       isGlobal: true,
-      useFactory: async () => ({
+      useFactory: () => ({
         ttl: 5000,
         stores: [new KeyvRedis(envs.REDIS_URL)],
       }),

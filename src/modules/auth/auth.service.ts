@@ -98,7 +98,9 @@ export class AuthService {
 
       return session;
     } catch (error) {
-      this.logger.warn(`Session creation failed for user ${userId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Session creation failed for user ${userId}: ${(error as Error).message}`,
+      );
       throw new BadRequestException("There was an error creating the session.");
     }
   }
@@ -162,7 +164,9 @@ export class AuthService {
       return { message: "Tokens refreshed" };
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
-      this.logger.warn(`Token refresh failed for user ${userId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Token refresh failed for user ${userId}: ${(error as Error).message}`,
+      );
       throw new BadRequestException("There was an error refreshing tokens.");
     }
   }
@@ -327,7 +331,9 @@ export class AuthService {
       this.clearTokenCookies(res);
       return { message: "Logged out successfully" };
     } catch (error) {
-      this.logger.warn(`Logout failed for user ${userId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Logout failed for user ${userId}: ${(error as Error).message}`,
+      );
       throw new BadRequestException("There was an error logging out.");
     }
   }

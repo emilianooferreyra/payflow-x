@@ -6,11 +6,11 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Request,
+  Req,
   Res,
   UseGuards,
 } from "@nestjs/common";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -34,7 +34,7 @@ export class AuthController {
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
-    @Request() req: any,
+    @Req() req: Request,
   ) {
     return this.authService.register(
       dto,
@@ -49,7 +49,7 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-    @Request() req: any,
+    @Req() req: Request,
   ) {
     return this.authService.login(dto, res, req.headers["user-agent"], req.ip);
   }
@@ -57,7 +57,11 @@ export class AuthController {
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   @UseGuards(RefreshTokenGuard)
-  async refresh(@CurrentUser() user, @Res({ passthrough: true }) res) {
+  async refresh(
+    @CurrentUser()
+    user: { userId: string; sessionId: string; refreshToken: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.authService.refresh(
       user.userId,
       user.sessionId,
@@ -69,7 +73,10 @@ export class AuthController {
   @Post("logout")
   @HttpCode(HttpStatus.OK)
   @UseGuards(RefreshTokenGuard)
-  async logout(@CurrentUser() user, @Res({ passthrough: true }) res) {
+  async logout(
+    @CurrentUser() user: { userId: string; sessionId: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.authService.logout(user.userId, user.sessionId, res);
   }
 
@@ -94,21 +101,27 @@ export class AuthController {
   @Post("2fa/generate")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async generate2FA(@CurrentUser() user) {
+  async generate2FA(@CurrentUser() user: { userId: string }) {
     return this.authService.generateTwoFactor(user.userId);
   }
 
   @Post("2fa/enable")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async enable2FA(@CurrentUser() user, @Body() dto: VerifyTwoFactorDto) {
+  async enable2FA(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: VerifyTwoFactorDto,
+  ) {
     return this.authService.enableTwoFactor(user.userId, dto.code);
   }
 
   @Post("2fa/disable")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async disable2FA(@CurrentUser() user, @Body() dto: VerifyTwoFactorDto) {
+  async disable2FA(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: VerifyTwoFactorDto,
+  ) {
     return this.authService.disableTwoFactor(user.userId, dto.code);
   }
 
@@ -116,10 +129,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(TwoFactorPendingGuard)
   async verify2FA(
-    @CurrentUser() user,
+    @CurrentUser() user: { userId: string },
     @Body() dto: VerifyTwoFactorDto,
     @Res({ passthrough: true }) res: Response,
-    @Request() req: any,
+    @Req() req: Request,
   ) {
     return this.authService.verifyTwoFactor(
       user.userId,
@@ -137,9 +150,9 @@ export class AuthController {
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
-    @CurrentUser() user,
+    @CurrentUser() user: any,
     @Res() res: Response,
-    @Request() req: any,
+    @Req() req: Request,
   ) {
     await this.authService.googleLogin(
       user,
