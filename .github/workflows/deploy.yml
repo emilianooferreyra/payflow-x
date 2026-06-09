@@ -1,0 +1,105 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push prod image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: prod
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: /opt/payflow
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            set -e
+
+            mkdir -p /opt/payflow
+
+            cat > /opt/payflow/.env << 'ENVEOF'
+            PORT=3000
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            DATABASE_URL=postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@auth-db:5432/authdb
+            REDIS_URL=redis://:${{ secrets.REDIS_PASSWORD }}@auth-redis:6379
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+            RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+            JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            ENVEOF
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            cd /opt/payflow
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+      - name: Health check
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost:3000/api/docs > /dev/null 2>&1; then
+                echo "✓ App is healthy"
+                exit 0
+              fi
+              echo "Waiting... ($i/10)"
+              sleep 3
+            done
+            echo "✗ App failed to start"
+            docker compose -f /opt/payflow/docker-compose.prod.yml logs --tail 30
+            exit 1

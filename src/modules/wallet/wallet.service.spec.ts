@@ -21,6 +21,14 @@ describe("WalletService", () => {
 
       expect(result).toEqual(wallets);
     });
+
+    it("should return empty array if no wallets", async () => {
+      mockPrisma.wallet.findMany.mockResolvedValue([]);
+
+      const result = await service.getWallets("user-id");
+
+      expect(result).toEqual([]);
+    });
   });
 
   describe("deposit", () => {
@@ -90,6 +98,14 @@ describe("WalletService", () => {
       await expect(
         service.withdraw({ userId: wallet.userId, currency: "ARS" as any, amount: 500 }),
       ).rejects.toThrow(UnprocessableEntityException);
+    });
+
+    it("should throw if wallet not found", async () => {
+      mockPrisma.wallet.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.withdraw({ userId: "invalid", currency: "ARS" as any, amount: 500 }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

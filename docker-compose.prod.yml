@@ -3,19 +3,19 @@ services:
   app:
     build:
       context: ./
-      target: dev
-    volumes:
-      - ./src:/usr/src/app/src
+      target: prod
     ports:
       - '3000:3000'
     depends_on:
-      - auth-db
-      - auth-redis
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_started
     environment:
-      - PORT=${PORT}
+      - PORT=3001
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
-      - DATABASE_URL=postgresql://postgres:123456@auth-db:5432/authdb
-      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@auth-db:5432/authdb
+      - REDIS_URL=redis://auth-redis:6379
       - RESEND_API_KEY=${RESEND_API_KEY}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
@@ -23,6 +23,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+    restart: unless-stopped
 
   auth-db:
     container_name: auth-db
@@ -32,8 +33,13 @@ services:
       - pgdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=123456
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=authdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   auth-redis:
     container_name: auth-redis
@@ -41,9 +47,7 @@ services:
     restart: always
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
 
 volumes:
   pgdata:

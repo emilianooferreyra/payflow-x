@@ -3,7 +3,10 @@ import { z } from "zod";
 
 export const envSchema = z
   .object({
-    PORT: z.string().min(1, "PORT is required.").transform(Number),
+    PORT: z
+      .string()
+      .default("3000")
+      .transform(Number),
     ALLOWED_ORIGINS: z
       .string()
       .min(1, "ALLOWED_ORIGINS is required.")

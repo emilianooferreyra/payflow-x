@@ -1,6 +1,16 @@
 dist/
 node_modules/
 postgres/
-
+.git/
+coverage/
+test/
+*.md
+.env
 .env/
 .vscode/
+.agents/
+.claude/
+.opencode/
+openspec/
+docs/
+eslint.config.mjs
