@@ -12,20 +12,6 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ============================================
-# DEV — source mounted at runtime via volume
-# ============================================
-FROM base AS dev
-
-COPY prisma ./prisma
-RUN npx prisma generate
-
-COPY . .
-
-EXPOSE 3000
-
-CMD ["sh", "-c", "npx prisma generate && pnpm run start:dev"]
-
-# ============================================
 # BUILD — compile for production
 # ============================================
 FROM base AS build
@@ -70,3 +56,17 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
 
 CMD ["sh", "-c", "npx prisma generate && node dist/main.js"]
+
+# ============================================
+# DEV — source mounted at runtime via volume (default for Railway)
+# ============================================
+FROM base AS dev
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npx prisma generate && pnpm run start:dev"]
