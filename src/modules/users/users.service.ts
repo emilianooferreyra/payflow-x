@@ -119,6 +119,27 @@ export class UsersService {
     return user;
   }
 
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        ...this.safeSelect,
+        kyc: {
+          select: {
+            status: true,
+            documentType: true,
+            submittedAt: true,
+            reviewedAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!user) throw new NotFoundException("User not found");
+    return user;
+  }
+
   async updateTwoFactor(
     id: string,
     data: { twoFactorEnabled?: boolean; twoFactorSecret?: string | null },

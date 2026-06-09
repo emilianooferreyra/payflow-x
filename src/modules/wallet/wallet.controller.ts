@@ -19,7 +19,7 @@ import { ExchangeDto } from "./dto/exchange.dto";
 @ApiTags("Wallet")
 @ApiCookieAuth()
 @Controller("wallet")
-@UseGuards(JwtAuthGuard, KycGuard)
+@UseGuards(JwtAuthGuard)
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
@@ -30,18 +30,21 @@ export class WalletController {
 
   @Post("deposit")
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(KycGuard)
   async deposit(@CurrentUser() user, @Body() dto: DepositDto) {
     return this.walletService.deposit({ userId: user.userId, ...dto });
   }
 
   @Post("withdraw")
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(KycGuard)
   async withdraw(@CurrentUser() user, @Body() dto: WithdrawDto) {
     return this.walletService.withdraw({ userId: user.userId, ...dto });
   }
 
   @Post("exchange")
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(KycGuard)
   async exchange(@CurrentUser() user, @Body() dto: ExchangeDto) {
     return this.walletService.exchange({ userId: user.userId, ...dto });
   }

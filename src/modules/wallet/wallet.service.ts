@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { WebhookService } from "../webhook/webhook.service";
 import {
   DepositInterface,
   ExchangeInterface,
@@ -13,7 +14,10 @@ import {
 
 @Injectable()
 export class WalletService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly webhookService: WebhookService,
+  ) {}
 
   async getWallets(userId: string) {
     return this.prisma.wallet.findMany({
@@ -47,6 +51,17 @@ export class WalletService {
         }),
       ]);
 
+      this.webhookService.dispatch({
+        type: "deposit.confirmed",
+        data: {
+          walletId: wallet.id,
+          userId,
+          amount,
+          currency,
+          transactionId: transaction.id,
+        },
+      });
+
       return transaction;
     });
   }
@@ -78,6 +93,17 @@ export class WalletService {
           data: { balance: { decrement: amount } },
         }),
       ]);
+
+      this.webhookService.dispatch({
+        type: "withdraw.completed",
+        data: {
+          walletId: wallet.id,
+          userId,
+          amount,
+          currency,
+          transactionId: transaction.id,
+        },
+      });
 
       return transaction;
     });

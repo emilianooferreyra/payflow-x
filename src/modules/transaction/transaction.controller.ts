@@ -9,7 +9,7 @@ import { GetTransactionsDto } from "./dto/get-transactions.dto";
 @ApiTags("Transactions")
 @ApiCookieAuth()
 @Controller("transactions")
-@UseGuards(JwtAuthGuard, KycGuard)
+@UseGuards(JwtAuthGuard)
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 

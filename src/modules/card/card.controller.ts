@@ -16,7 +16,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 @ApiTags("Cards")
 @ApiCookieAuth()
 @Controller("cards")
-@UseGuards(JwtAuthGuard, KycGuard)
+@UseGuards(JwtAuthGuard)
 export class CardController {
   constructor(private readonly cardService: CardService) {}
 
@@ -27,12 +27,14 @@ export class CardController {
 
   @Patch(":id/freeze")
   @HttpCode(HttpStatus.OK)
+  @UseGuards(KycGuard)
   async freeze(@CurrentUser() user, @Param("id") id: string) {
     return this.cardService.freeze(id, user.userId);
   }
 
   @Patch(":id/unfreeze")
   @HttpCode(HttpStatus.OK)
+  @UseGuards(KycGuard)
   async unfreeze(@CurrentUser() user, @Param("id") id: string) {
     return this.cardService.unfreeze(id, user.userId);
   }

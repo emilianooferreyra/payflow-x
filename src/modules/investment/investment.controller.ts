@@ -18,7 +18,7 @@ import { SellAssetDto } from "./dto/sell-asset.dto";
 @ApiTags("Investments")
 @ApiCookieAuth()
 @Controller("investments")
-@UseGuards(JwtAuthGuard, KycGuard)
+@UseGuards(JwtAuthGuard)
 export class InvestmentController {
   constructor(private readonly investmentService: InvestmentService) {}
 
@@ -34,12 +34,14 @@ export class InvestmentController {
 
   @Post("buy")
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(KycGuard)
   async buy(@CurrentUser() user, @Body() dto: BuyAssetDto) {
     return this.investmentService.buy({ userId: user.userId, ...dto });
   }
 
   @Post("sell")
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(KycGuard)
   async sell(@CurrentUser() user, @Body() dto: SellAssetDto) {
     return this.investmentService.sell({ userId: user.userId, ...dto });
   }

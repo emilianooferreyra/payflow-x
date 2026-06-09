@@ -16,7 +16,7 @@ import { CurrencyEnum } from "../../generated/prisma/enums";
 @ApiTags("Exchange Rates")
 @ApiCookieAuth()
 @Controller("exchange-rates")
-@UseGuards(JwtAuthGuard, KycGuard)
+@UseGuards(JwtAuthGuard)
 export class ExchangeRateController {
   constructor(private readonly exchangeRateService: ExchangeRateService) {}
 
@@ -43,6 +43,7 @@ export class ExchangeRateController {
 
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
+  @UseGuards(KycGuard)
   async refresh() {
     return this.exchangeRateService.refresh();
   }

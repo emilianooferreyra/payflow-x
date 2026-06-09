@@ -14,10 +14,7 @@ export class UsersController {
   @Get("me")
   @UseGuards(JwtAuthGuard)
   async getMe(@CurrentUser() user: { userId: string }) {
-    const { password, ...me } = await this.usersService.findOne({
-      id: user.userId,
-    });
-    return me;
+    return this.usersService.getProfile(user.userId);
   }
 
   @Patch("me")
