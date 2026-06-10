@@ -6,6 +6,7 @@ type MockedModel = {
     | "findFirst"
     | "findMany"
     | "create"
+    | "createMany"
     | "update"
     | "upsert"
     | "delete"
@@ -33,6 +34,7 @@ const createMockedModel = (): MockedModel => ({
   findFirst: jest.fn(),
   findMany: jest.fn(),
   create: jest.fn(),
+  createMany: jest.fn(),
   update: jest.fn(),
   upsert: jest.fn(),
   delete: jest.fn(),
@@ -54,6 +56,7 @@ const mockPrisma = {
   exchangeRate: createMockedModel(),
   kycVerification: createMockedModel(),
   auditLog: createMockedModel(),
+  userBackupCode: createMockedModel(),
   $transaction: jest.fn(),
   $connect: jest.fn(),
   $disconnect: jest.fn(),

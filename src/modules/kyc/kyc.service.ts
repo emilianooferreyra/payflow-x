@@ -1,10 +1,13 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 const SUBMITTABLE_STATES = ["PENDING", "REJECTED"];
+const AUTO_APPROVE_DELAY_MS = 30_000;
 
 @Injectable()
 export class KycService {
+  private readonly logger = new Logger(KycService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getStatus(userId: string) {
@@ -27,7 +30,7 @@ export class KycService {
       );
     }
 
-    return this.prisma.kycVerification.update({
+    const result = await this.prisma.kycVerification.update({
       where: { userId },
       data: {
         status: "IN_REVIEW",
@@ -36,6 +39,27 @@ export class KycService {
         reviewedAt: null,
       },
     });
+
+    setTimeout(() => {
+      this.autoApprove(userId).catch((err) =>
+        this.logger.error(`Auto-approve failed for ${userId}: ${err.message}`),
+      );
+    }, AUTO_APPROVE_DELAY_MS);
+
+    return result;
+  }
+
+  private async autoApprove(userId: string) {
+    const kyc = await this.prisma.kycVerification.findUnique({
+      where: { userId },
+    });
+    if (!kyc || kyc.status !== "IN_REVIEW") return;
+
+    await this.prisma.kycVerification.update({
+      where: { userId },
+      data: { status: "APPROVED", reviewedAt: new Date() },
+    });
+    this.logger.log(`KYC auto-approved for user ${userId}`);
   }
 
   async review(userId: string, action: "approve" | "reject") {

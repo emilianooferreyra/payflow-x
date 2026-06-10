@@ -19,6 +19,7 @@ import { CardModule } from "./modules/card/card.module";
 import { ExchangeRateModule } from "./modules/exchange-rate/exchange-rate.module";
 import { KycModule } from "./modules/kyc/kyc.module";
 import { WebhookModule } from "./modules/webhook/webhook.module";
+import { BeneficiariesModule } from "./modules/beneficiaries/beneficiaries.module";
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { WebhookModule } from "./modules/webhook/webhook.module";
     ExchangeRateModule,
     KycModule,
     WebhookModule,
+    BeneficiariesModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

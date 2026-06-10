@@ -87,6 +87,7 @@ export const makeWallet = (
     userId: string;
     currency: string;
     balance: number;
+    version: number;
     createdAt: Date;
     updatedAt: Date;
   }> = {},
@@ -95,6 +96,7 @@ export const makeWallet = (
   userId: uniqueId(),
   currency: "ARS",
   balance: 10000,
+  version: 1,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,

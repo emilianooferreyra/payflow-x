@@ -12,6 +12,7 @@ import { WalletService } from "./wallet.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { KycGuard } from "../kyc/guards/kyc.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Idempotent } from "../../common/decorators/idempotent.decorator";
 import { DepositDto } from "./dto/deposit.dto";
 import { WithdrawDto } from "./dto/withdraw.dto";
 import { ExchangeDto } from "./dto/exchange.dto";
@@ -30,7 +31,7 @@ export class WalletController {
 
   @Post("deposit")
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(KycGuard)
+  @Idempotent()
   async deposit(@CurrentUser() user, @Body() dto: DepositDto) {
     return this.walletService.deposit({ userId: user.userId, ...dto });
   }
@@ -38,6 +39,7 @@ export class WalletController {
   @Post("withdraw")
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(KycGuard)
+  @Idempotent()
   async withdraw(@CurrentUser() user, @Body() dto: WithdrawDto) {
     return this.walletService.withdraw({ userId: user.userId, ...dto });
   }
@@ -45,6 +47,7 @@ export class WalletController {
   @Post("exchange")
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(KycGuard)
+  @Idempotent()
   async exchange(@CurrentUser() user, @Body() dto: ExchangeDto) {
     return this.walletService.exchange({ userId: user.userId, ...dto });
   }

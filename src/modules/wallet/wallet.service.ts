@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -14,6 +15,8 @@ import {
 
 @Injectable()
 export class WalletService {
+  private readonly MAX_RETRIES = 3;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly webhookService: WebhookService,
@@ -27,86 +30,127 @@ export class WalletService {
   }
 
   async deposit({ userId, currency, amount, description }: DepositInterface) {
-    return this.prisma.$transaction(async (tx) => {
-      const wallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency } },
-      });
+    for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          let wallet = await tx.wallet.findUnique({
+            where: { userId_currency: { userId, currency } },
+          });
 
-      if (!wallet) throw new NotFoundException(`Wallet ${currency} not found`);
+          if (!wallet) {
+            wallet = await tx.wallet.create({
+              data: { userId, currency, balance: 0, version: 1 },
+            });
+          }
 
-      const [transaction] = await Promise.all([
-        tx.transaction.create({
-          data: {
-            walletId: wallet.id,
-            type: "DEPOSIT",
-            amount,
-            currency,
-            status: "COMPLETED",
-            description: description ?? `Depósito ${currency}`,
-          },
-        }),
-        tx.wallet.update({
-          where: { id: wallet.id },
-          data: { balance: { increment: amount } },
-        }),
-      ]);
+          const { count } = await tx.wallet.updateMany({
+            where: { id: wallet.id, version: wallet.version },
+            data: {
+              balance: { increment: amount },
+              version: { increment: 1 },
+            },
+          });
 
-      this.webhookService.dispatch({
-        type: "deposit.confirmed",
-        data: {
-          walletId: wallet.id,
-          userId,
-          amount,
-          currency,
-          transactionId: transaction.id,
-        },
-      });
+          if (count === 0) {
+            throw new ConflictException("Optimistic lock conflict");
+          }
 
-      return transaction;
-    });
+          const transaction = await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "DEPOSIT",
+              amount,
+              currency,
+              status: "COMPLETED",
+              description: description ?? `Depósito ${currency}`,
+            },
+          });
+
+          this.webhookService.dispatch({
+            type: "deposit.confirmed",
+            data: {
+              walletId: wallet.id,
+              userId,
+              amount,
+              currency,
+              transactionId: transaction.id,
+            },
+          });
+
+          return transaction;
+        });
+      } catch (error) {
+        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error("Unreachable");
   }
 
   async withdraw({ userId, currency, amount, description }: WithdrawInterface) {
-    return this.prisma.$transaction(async (tx) => {
-      const wallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency } },
-      });
+    for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const wallet = await tx.wallet.findUnique({
+            where: { userId_currency: { userId, currency } },
+          });
 
-      if (!wallet) throw new NotFoundException(`Wallet ${currency} not found`);
-      if (Number(wallet.balance) < amount) {
-        throw new UnprocessableEntityException("Insufficient balance");
+          if (!wallet) throw new NotFoundException(`Wallet ${currency} not found`);
+
+          if (Number(wallet.balance) < amount) {
+            throw new UnprocessableEntityException("Insufficient balance");
+          }
+
+          const { count } = await tx.wallet.updateMany({
+            where: { id: wallet.id, version: wallet.version },
+            data: {
+              balance: { decrement: amount },
+              version: { increment: 1 },
+            },
+          });
+
+          if (count === 0) {
+            throw new ConflictException("Optimistic lock conflict");
+          }
+
+          const transaction = await tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "WITHDRAWAL",
+              amount,
+              currency,
+              status: "COMPLETED",
+              description: description ?? `Retiro ${currency}`,
+            },
+          });
+
+          this.webhookService.dispatch({
+            type: "withdraw.completed",
+            data: {
+              walletId: wallet.id,
+              userId,
+              amount,
+              currency,
+              transactionId: transaction.id,
+            },
+          });
+
+          return transaction;
+        });
+      } catch (error) {
+        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+          continue;
+        }
+        if (error instanceof UnprocessableEntityException) throw error;
+        if (error instanceof NotFoundException) throw error;
+        throw error;
       }
+    }
 
-      const [transaction] = await Promise.all([
-        tx.transaction.create({
-          data: {
-            walletId: wallet.id,
-            type: "WITHDRAWAL",
-            amount,
-            currency,
-            status: "COMPLETED",
-            description: description ?? `Retiro ${currency}`,
-          },
-        }),
-        tx.wallet.update({
-          where: { id: wallet.id },
-          data: { balance: { decrement: amount } },
-        }),
-      ]);
-
-      this.webhookService.dispatch({
-        type: "withdraw.completed",
-        data: {
-          walletId: wallet.id,
-          userId,
-          amount,
-          currency,
-          transactionId: transaction.id,
-        },
-      });
-
-      return transaction;
-    });
+    throw new Error("Unreachable");
   }
 
   async exchange({
@@ -121,59 +165,88 @@ export class WalletService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const [sourceWallet, targetWallet, exchangeRate] = await Promise.all([
-        tx.wallet.findUnique({
-          where: { userId_currency: { userId, currency: fromCurrency } },
-        }),
-        tx.wallet.findUnique({
-          where: { userId_currency: { userId, currency: toCurrency } },
-        }),
-        tx.exchangeRate.findFirst({
-          where: { fromCurrency, toCurrency },
-          orderBy: { date: "desc" },
-        }),
-      ]);
+    for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const [sourceWallet, targetWallet, exchangeRate] = await Promise.all([
+            tx.wallet.findUnique({
+              where: { userId_currency: { userId, currency: fromCurrency } },
+            }),
+            tx.wallet.findUnique({
+              where: { userId_currency: { userId, currency: toCurrency } },
+            }),
+            tx.exchangeRate.findFirst({
+              where: { fromCurrency, toCurrency },
+              orderBy: { date: "desc" },
+            }),
+          ]);
 
-      if (!sourceWallet)
-        throw new NotFoundException(`Wallet ${fromCurrency} not found`);
-      if (!targetWallet)
-        throw new NotFoundException(`Wallet ${toCurrency} not found`);
-      if (!exchangeRate)
-        throw new NotFoundException(
-          `Exchange rate ${fromCurrency}/${toCurrency} not available`,
-        );
-      if (Number(sourceWallet.balance) < amount) {
-        throw new UnprocessableEntityException("Insufficient balance");
+          if (!sourceWallet)
+            throw new NotFoundException(`Wallet ${fromCurrency} not found`);
+          if (!targetWallet)
+            throw new NotFoundException(`Wallet ${toCurrency} not found`);
+          if (!exchangeRate)
+            throw new NotFoundException(
+              `Exchange rate ${fromCurrency}/${toCurrency} not available`,
+            );
+          if (Number(sourceWallet.balance) < amount) {
+            throw new UnprocessableEntityException("Insufficient balance");
+          }
+
+          const rate = Number(exchangeRate.rate);
+          const received = parseFloat((amount * rate).toFixed(2));
+
+          const sourceUpdate = tx.wallet.updateMany({
+            where: { id: sourceWallet.id, version: sourceWallet.version },
+            data: {
+              balance: { decrement: amount },
+              version: { increment: 1 },
+            },
+          });
+
+          const targetUpdate = tx.wallet.updateMany({
+            where: { id: targetWallet.id, version: targetWallet.version },
+            data: {
+              balance: { increment: received },
+              version: { increment: 1 },
+            },
+          });
+
+          const [sourceResult, targetResult] = await Promise.all([
+            sourceUpdate,
+            targetUpdate,
+          ]);
+
+          if (sourceResult.count === 0 || targetResult.count === 0) {
+            throw new ConflictException("Optimistic lock conflict");
+          }
+
+          const transaction = await tx.transaction.create({
+            data: {
+              walletId: sourceWallet.id,
+              toWalletId: targetWallet.id,
+              type: "EXCHANGE",
+              amount,
+              currency: fromCurrency,
+              status: "COMPLETED",
+              description: `Conversión ${fromCurrency} → ${toCurrency}`,
+              metadata: { rate, received, toCurrency },
+            },
+          });
+
+          return { ...transaction, received, rate, toCurrency };
+        });
+      } catch (error) {
+        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+          continue;
+        }
+        if (error instanceof UnprocessableEntityException) throw error;
+        if (error instanceof NotFoundException) throw error;
+        if (error instanceof BadRequestException) throw error;
+        throw error;
       }
+    }
 
-      const rate = Number(exchangeRate.rate);
-      const received = parseFloat((amount * rate).toFixed(2));
-
-      const [transaction] = await Promise.all([
-        tx.transaction.create({
-          data: {
-            walletId: sourceWallet.id,
-            toWalletId: targetWallet.id,
-            type: "EXCHANGE",
-            amount,
-            currency: fromCurrency,
-            status: "COMPLETED",
-            description: `Conversión ${fromCurrency} → ${toCurrency}`,
-            metadata: { rate, received, toCurrency },
-          },
-        }),
-        tx.wallet.update({
-          where: { id: sourceWallet.id },
-          data: { balance: { decrement: amount } },
-        }),
-        tx.wallet.update({
-          where: { id: targetWallet.id },
-          data: { balance: { increment: received } },
-        }),
-      ]);
-
-      return { ...transaction, received, rate, toCurrency };
-    });
+    throw new Error("Unreachable");
   }
 }

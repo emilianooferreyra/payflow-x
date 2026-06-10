@@ -51,7 +51,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
   ) {
-    return this.authService.login(dto, res, req.headers["user-agent"], req.ip);
+    return this.authService.login(dto, res, req, req.headers["user-agent"], req.ip);
   }
 
   @Post("refresh")
@@ -96,6 +96,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.email, dto.code, dto.password);
+  }
+
+  @Post("2fa/codes/regenerate")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async regenerateBackupCodes(@CurrentUser() user: { userId: string }) {
+    return this.authService.regenerateBackupCodes(user.userId);
   }
 
   @Post("2fa/generate")

@@ -7,6 +7,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 import { RefreshStrategy } from "./strategies/refresh.strategy";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { TwoFactorPendingStrategy } from "./strategies/two-factor-pending.strategy";
+import { PrismaModule } from "../prisma/prisma.module";
 import { UsersModule } from "../users/users.module";
 import { HashModule } from "../hash/hash.module";
 import { SessionModule } from "../session/session.module";
@@ -21,6 +22,7 @@ import { envs } from "../../config";
       secret: envs.JWT_ACCESS_SECRET,
       signOptions: { expiresIn: "15m" },
     }),
+    PrismaModule,
     UsersModule,
     HashModule,
     SessionModule,

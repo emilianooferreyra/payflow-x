@@ -31,8 +31,9 @@ model User {
   session     Session[]
   wallets     Wallet[]
   investments Investment[]
-  cards       Card[]
-  kyc         KycVerification?
+  cards         Card[]
+  beneficiaries Beneficiary[]
+  kyc           KycVerification?
 
   status       UserStatusEnum   @default(ACTIVE)
   authProvider AuthProviderEnum @default(LOCAL)
@@ -87,6 +88,7 @@ model Wallet {
 
   currency CurrencyEnum
   balance  Decimal      @default(0) @db.Decimal(18, 2)
+  version  Int          @default(1)
 
   transactions         Transaction[] @relation("WalletTransactions")
   incomingTransactions Transaction[] @relation("WalletIncomingTransactions")
@@ -290,6 +292,59 @@ model WebhookDelivery {
   updatedAt      DateTime        @updatedAt
 
   @@index([endpointId, createdAt])
+}
+
+enum BeneficiaryTypeEnum {
+  CBU
+  CVU
+  ALIAS
+  SWIFT
+  ACCOUNT_NUMBER
+}
+
+model Beneficiary {
+  id              String               @id @default(uuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  alias           String
+  beneficiaryType BeneficiaryTypeEnum
+  accountNumber   String
+  bankName        String?
+  currency        CurrencyEnum
+  country         String               @default("AR")
+  documentType    String?
+  documentNumber  String?
+  isActive        Boolean              @default(true)
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([userId, currency])
+}
+
+model IdempotencyRecord {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  userId    String
+  route     String
+  response  Json
+  statusCode Int
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model UserBackupCode {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, code])
+  @@index([userId])
 }
 
 model AuditLog {

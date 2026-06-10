@@ -1,19 +1,34 @@
+import { Test } from "@nestjs/testing";
 import {
+  ConflictException,
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { WalletService } from "./wallet.service";
+import { WebhookService } from "../webhook/webhook.service";
+import { PrismaService } from "../prisma/prisma.service";
 import {
   mockPrisma,
-  createTestingModule,
   makeWallet,
 } from "../../common/testing";
 
 describe("WalletService", () => {
   let service: WalletService;
 
+  const mockWebhookService = { dispatch: jest.fn() };
+
+  function mockUpdateMany(affected: number) {
+    return mockPrisma.wallet.updateMany.mockResolvedValue({ count: affected });
+  }
+
   beforeEach(async () => {
-    const module = await createTestingModule([WalletService]);
+    const module = await Test.createTestingModule({
+      providers: [
+        WalletService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: WebhookService, useValue: mockWebhookService },
+      ],
+    }).compile();
     service = module.get<WalletService>(WalletService);
     jest.resetAllMocks();
     mockPrisma.$transaction.mockImplementation(async (fn: any) =>
@@ -44,7 +59,7 @@ describe("WalletService", () => {
     it("should increase balance and create a transaction", async () => {
       const wallet = makeWallet({ balance: 1000 });
       mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
-      mockPrisma.wallet.update.mockResolvedValue({ ...wallet, balance: 1500 });
+      mockUpdateMany(1);
       mockPrisma.transaction.create.mockResolvedValue({
         id: "tx-1",
         walletId: wallet.id,
@@ -61,23 +76,51 @@ describe("WalletService", () => {
       });
 
       expect(result.type).toBe("DEPOSIT");
-      expect(mockPrisma.wallet.update).toHaveBeenCalledWith(
+      expect(mockPrisma.wallet.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { balance: { increment: 500 } },
+          where: { id: wallet.id, version: wallet.version },
+          data: { balance: { increment: 500 }, version: { increment: 1 } },
         }),
       );
     });
 
-    it("should throw if wallet not found", async () => {
+    it("should create wallet on first deposit", async () => {
       mockPrisma.wallet.findUnique.mockResolvedValue(null);
+      mockPrisma.wallet.create.mockResolvedValue(makeWallet({ balance: 500 }));
+      mockUpdateMany(1);
+      mockPrisma.transaction.create.mockResolvedValue({
+        id: "tx-1",
+        type: "DEPOSIT",
+        amount: 500,
+      });
+
+      const result = await service.deposit({
+        userId: "user-1",
+        currency: "ARS" as any,
+        amount: 500,
+      });
+
+      expect(result.type).toBe("DEPOSIT");
+    });
+
+    it("should retry on optimistic lock conflict", async () => {
+      const wallet = makeWallet({ balance: 1000 });
+      mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
+      mockUpdateMany(0);
+      mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
+      mockPrisma.transaction.create.mockResolvedValue({
+        id: "tx-1",
+        type: "DEPOSIT",
+        amount: 500,
+      });
 
       await expect(
         service.deposit({
-          userId: "invalid",
-          currency: "ARS" as any,
+          userId: wallet.userId,
+          currency: "ARS",
           amount: 500,
         }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -85,7 +128,7 @@ describe("WalletService", () => {
     it("should decrease balance and create a transaction", async () => {
       const wallet = makeWallet({ balance: 1000 });
       mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
-      mockPrisma.wallet.update.mockResolvedValue({ ...wallet, balance: 500 });
+      mockUpdateMany(1);
       mockPrisma.transaction.create.mockResolvedValue({
         id: "tx-1",
         walletId: wallet.id,
@@ -148,7 +191,7 @@ describe("WalletService", () => {
         rate: 0.001,
         date: new Date(),
       });
-      mockPrisma.wallet.update.mockResolvedValue(makeWallet());
+      mockUpdateMany(1);
       mockPrisma.transaction.create.mockResolvedValue({
         id: "tx-1",
         walletId: sourceWallet.id,
