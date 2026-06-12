@@ -14,11 +14,13 @@ import { EmailsService } from "../emails/emails.service";
 import { mockPrisma, makeUser } from "../../common/testing";
 
 let mockOtpVerify = jest.fn(() => ({ valid: true }));
+
 jest.mock("otplib", () => ({
   generateSecret: jest.fn(() => "mocked-secret"),
   generateURI: jest.fn(() => "mocked-uri"),
-  verify: (...args: any[]) => mockOtpVerify(...args),
+  verify: (..._args: any[]) => mockOtpVerify(),
 }));
+
 jest.mock("qrcode", () => ({ toDataURL: jest.fn(() => "mocked-qr") }));
 
 describe("AuthService", () => {
@@ -108,7 +110,7 @@ describe("AuthService", () => {
         res,
       );
 
-      expect(result.user.email).toBe("test@example.com");
+      expect((result as { user: { email: string } }).user.email).toBe("test@example.com");
       expect(mockPrisma.userBackupCode.update).toHaveBeenCalledWith({
         where: { id: "bc-1" },
         data: { usedAt: expect.any(Date) },
@@ -200,7 +202,7 @@ describe("AuthService", () => {
         req,
       );
 
-      expect(result.user.email).toBe("test@example.com");
+      expect((result as { user: { email: string } }).user.email).toBe("test@example.com");
     });
   });
 });
