@@ -1,6 +1,6 @@
 process.env.PORT = "3000";
 process.env.ALLOWED_ORIGINS = "http://localhost:3000";
-process.env.DATABASE_URL = "postgresql://postgres:123456@localhost:5432/authdb";
+process.env.DATABASE_URL = "postgresql://postgres:123456@localhost:5432/authdb_test";
 process.env.REDIS_URL = "redis://localhost:6379";
 process.env.RESEND_API_KEY = "re_mocked";
 process.env.RESEND_FROM_EMAIL = "test@test.com";
