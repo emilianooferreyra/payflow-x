@@ -1,3 +1,12 @@
+jest.mock("../../config", () => ({
+  envs: {
+    JWT_REFRESH_SECRET: "mocked-refresh-secret",
+    JWT_ACCESS_SECRET: "mocked-access-secret",
+    RESEND_API_KEY: "re_mocked",
+    RESEND_FROM_EMAIL: "test@test.com",
+  },
+}));
+
 import { Test } from "@nestjs/testing";
 import { PasswordRecoveryService } from "./password-recovery.service";
 import { UsersService } from "../users/users.service";

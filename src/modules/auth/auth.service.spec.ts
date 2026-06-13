@@ -1,3 +1,10 @@
+jest.mock("../../config", () => ({
+  envs: {
+    JWT_REFRESH_SECRET: "mocked-refresh-secret",
+    JWT_ACCESS_SECRET: "mocked-access-secret",
+  },
+}));
+
 import { Test } from "@nestjs/testing";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
