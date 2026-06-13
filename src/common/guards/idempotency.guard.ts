@@ -1,4 +1,10 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, ConflictException, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  Logger,
+} from "@nestjs/common";
 import { Observable, of } from "rxjs";
 import { tap } from "rxjs/operators";
 import { PrismaService } from "../../modules/prisma/prisma.service";
@@ -11,13 +17,18 @@ export class IdempotencyGuard implements NestInterceptor {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     const key = request.headers["idempotency-key"];
 
     if (!key) return next.handle();
 
-    const cached = await this.prisma.idempotencyRecord.findUnique({ where: { key } });
+    const cached = await this.prisma.idempotencyRecord.findUnique({
+      where: { key },
+    });
 
     if (cached) {
       const age = Date.now() - cached.createdAt.getTime();

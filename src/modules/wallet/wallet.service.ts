@@ -33,7 +33,6 @@ export class WalletService {
   }
 
   async deposit({ userId, currency, amount, description }: DepositInterface) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let transaction: any;
 
     for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
@@ -75,7 +74,10 @@ export class WalletService {
 
         break; // transaction committed, exit retry loop
       } catch (error) {
-        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+        if (
+          error instanceof ConflictException &&
+          attempt < this.MAX_RETRIES - 1
+        ) {
           continue;
         }
         throw error;
@@ -95,14 +97,15 @@ export class WalletService {
         },
       })
       .catch((err) =>
-        this.logger.warn(`Webhook dispatch failed for deposit ${transaction.id}: ${err.message}`),
+        this.logger.warn(
+          `Webhook dispatch failed for deposit ${transaction.id}: ${err.message}`,
+        ),
       );
 
     return transaction;
   }
 
   async withdraw({ userId, currency, amount, description }: WithdrawInterface) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let transaction: any;
 
     for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
@@ -112,7 +115,8 @@ export class WalletService {
             where: { userId_currency: { userId, currency } },
           });
 
-          if (!wallet) throw new NotFoundException(`Wallet ${currency} not found`);
+          if (!wallet)
+            throw new NotFoundException(`Wallet ${currency} not found`);
 
           if (Number(wallet.balance) < amount) {
             throw new UnprocessableEntityException("Insufficient balance");
@@ -144,7 +148,10 @@ export class WalletService {
 
         break; // transaction committed, exit retry loop
       } catch (error) {
-        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+        if (
+          error instanceof ConflictException &&
+          attempt < this.MAX_RETRIES - 1
+        ) {
           continue;
         }
         if (error instanceof UnprocessableEntityException) throw error;
@@ -170,7 +177,9 @@ export class WalletService {
         },
       })
       .catch((err) =>
-        this.logger.warn(`Webhook dispatch failed for withdrawal ${transaction.id}: ${err.message}`),
+        this.logger.warn(
+          `Webhook dispatch failed for withdrawal ${transaction.id}: ${err.message}`,
+        ),
       );
 
     return transaction;
@@ -260,7 +269,10 @@ export class WalletService {
           return { ...transaction, received, rate, toCurrency };
         });
       } catch (error) {
-        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+        if (
+          error instanceof ConflictException &&
+          attempt < this.MAX_RETRIES - 1
+        ) {
           continue;
         }
         if (error instanceof UnprocessableEntityException) throw error;
@@ -282,17 +294,21 @@ export class WalletService {
       throw new NotFoundException("Beneficiary not found");
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let transaction: any;
 
     for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
       try {
         transaction = await this.prisma.$transaction(async (tx) => {
           const wallet = await tx.wallet.findUnique({
-            where: { userId_currency: { userId, currency: beneficiary.currency } },
+            where: {
+              userId_currency: { userId, currency: beneficiary.currency },
+            },
           });
 
-          if (!wallet) throw new NotFoundException(`Wallet ${beneficiary.currency} not found`);
+          if (!wallet)
+            throw new NotFoundException(
+              `Wallet ${beneficiary.currency} not found`,
+            );
           if (Number(wallet.balance) < amount) {
             throw new UnprocessableEntityException("Insufficient balance");
           }
@@ -330,7 +346,10 @@ export class WalletService {
 
         break;
       } catch (error) {
-        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+        if (
+          error instanceof ConflictException &&
+          attempt < this.MAX_RETRIES - 1
+        ) {
           continue;
         }
         if (error instanceof UnprocessableEntityException) throw error;
@@ -355,7 +374,9 @@ export class WalletService {
         },
       })
       .catch((err) =>
-        this.logger.warn(`Webhook dispatch failed for send ${transaction.id}: ${err.message}`),
+        this.logger.warn(
+          `Webhook dispatch failed for send ${transaction.id}: ${err.message}`,
+        ),
       );
 
     return transaction;

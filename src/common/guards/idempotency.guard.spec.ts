@@ -21,7 +21,11 @@ describe("IdempotencyGuard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockRequest = { headers: {}, user: { userId: "user-1" }, route: { path: "/wallet/deposit" } };
+    mockRequest = {
+      headers: {},
+      user: { userId: "user-1" },
+      route: { path: "/wallet/deposit" },
+    };
     mockResponse = { status: jest.fn(), statusCode: 201 };
 
     mockContext = {

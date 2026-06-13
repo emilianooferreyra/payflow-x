@@ -8,7 +8,7 @@ import { HashService } from "../hash/hash.service";
 import { SessionTokenService } from "./session-token.service";
 import { mockPrisma, makeUser } from "../../common/testing";
 
-let mockOtpVerify = jest.fn(() => ({ valid: true }));
+const mockOtpVerify = jest.fn(() => ({ valid: true }));
 
 jest.mock("otplib", () => ({
   generateSecret: jest.fn(() => "mocked-secret"),
@@ -60,12 +60,12 @@ describe("TwoFactorService", () => {
     jest.resetAllMocks();
     mockOtpVerify.mockReturnValue({ valid: true });
 
-    const otplibMock = jest.requireMock("otplib") as any;
+    const otplibMock = jest.requireMock("otplib");
     otplibMock.generateSecret.mockReturnValue("mocked-secret");
     otplibMock.generateURI.mockReturnValue("mocked-uri");
     otplibMock.verify.mockImplementation((..._args: any[]) => mockOtpVerify());
 
-    const qrcodeMock = jest.requireMock("qrcode") as any;
+    const qrcodeMock = jest.requireMock("qrcode");
     qrcodeMock.toDataURL.mockReturnValue("mocked-qr");
   });
 
@@ -98,15 +98,11 @@ describe("TwoFactorService", () => {
       });
 
       const res = { cookie: jest.fn(), clearCookie: jest.fn() };
-      const result = await service.verifyTwoFactor(
-        "user-1",
-        "ABCD1234",
-        res,
-      );
+      const result = await service.verifyTwoFactor("user-1", "ABCD1234", res);
 
-      expect(
-        (result as { user: { email: string } }).user.email,
-      ).toBe("test@example.com");
+      expect((result as { user: { email: string } }).user.email).toBe(
+        "test@example.com",
+      );
       expect(mockPrisma.userBackupCode.update).toHaveBeenCalledWith({
         where: { id: "bc-1" },
         data: { usedAt: expect.any(Date) },

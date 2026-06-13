@@ -1,9 +1,6 @@
 import { Test } from "@nestjs/testing";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import {
-  BadRequestException,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { TokensService } from "./tokens.service";
 import { AuthorizationTokenEnum } from "../../common/enums/authorization-token.enum";
 
@@ -64,9 +61,9 @@ describe("TokensService", () => {
     it("should throw BadRequestException when cache set fails", async () => {
       mockCache.set.mockRejectedValue(new Error("Redis connection lost"));
 
-      await expect(
-        service.generateToken({ userId, type }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.generateToken({ userId, type })).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(mockCache.set).toHaveBeenCalled();
     });
@@ -84,9 +81,7 @@ describe("TokensService", () => {
       });
 
       expect(result).toEqual(stored);
-      expect(mockCache.get).toHaveBeenCalledWith(
-        `token${type}:user:${userId}`,
-      );
+      expect(mockCache.get).toHaveBeenCalledWith(`token${type}:user:${userId}`);
     });
 
     it("should throw UnauthorizedException when token does not match", async () => {
@@ -125,17 +120,15 @@ describe("TokensService", () => {
       const result = await service.revokeToken({ userId, type });
 
       expect(result).toBe(true);
-      expect(mockCache.del).toHaveBeenCalledWith(
-        `token${type}:user:${userId}`,
-      );
+      expect(mockCache.del).toHaveBeenCalledWith(`token${type}:user:${userId}`);
     });
 
     it("should throw BadRequestException when cache del fails", async () => {
       mockCache.del.mockRejectedValue(new Error("Redis connection lost"));
 
-      await expect(
-        service.revokeToken({ userId, type }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.revokeToken({ userId, type })).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

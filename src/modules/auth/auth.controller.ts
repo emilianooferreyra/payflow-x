@@ -51,7 +51,13 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
   ) {
-    return this.authService.login(dto, res, req, req.headers["user-agent"], req.ip);
+    return this.authService.login(
+      dto,
+      res,
+      req,
+      req.headers["user-agent"],
+      req.ip,
+    );
   }
 
   @Post("refresh")

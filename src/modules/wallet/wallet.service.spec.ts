@@ -7,16 +7,14 @@ import {
 import { WalletService } from "./wallet.service";
 import { WebhookService } from "../webhook/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
-import {
-  mockPrisma,
-  makeWallet,
-  makeBeneficiary,
-} from "../../common/testing";
+import { mockPrisma, makeWallet, makeBeneficiary } from "../../common/testing";
 
 describe("WalletService", () => {
   let service: WalletService;
 
-  const mockWebhookService = { dispatch: jest.fn().mockResolvedValue(undefined) };
+  const mockWebhookService = {
+    dispatch: jest.fn().mockResolvedValue(undefined),
+  };
 
   function mockUpdateMany(affected: number) {
     return mockPrisma.wallet.updateMany.mockResolvedValue({ count: affected });
@@ -98,7 +96,7 @@ describe("WalletService", () => {
 
       const result = await service.deposit({
         userId: "user-1",
-        currency: "ARS" as any,
+        currency: "ARS",
         amount: 500,
       });
 
@@ -261,7 +259,11 @@ describe("WalletService", () => {
       mockPrisma.beneficiary.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.send({ userId: "user-1", beneficiaryId: "invalid", amount: 100 }),
+        service.send({
+          userId: "user-1",
+          beneficiaryId: "invalid",
+          amount: 100,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -271,7 +273,11 @@ describe("WalletService", () => {
       mockPrisma.wallet.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.send({ userId: "user-1", beneficiaryId: beneficiary.id, amount: 100 }),
+        service.send({
+          userId: "user-1",
+          beneficiaryId: beneficiary.id,
+          amount: 100,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 

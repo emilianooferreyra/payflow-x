@@ -1,10 +1,8 @@
+import { IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
 import {
-  IsBoolean,
-  IsEnum,
-  IsOptional,
-  IsString,
-} from "class-validator";
-import { BeneficiaryTypeEnum, CurrencyEnum } from "../../../generated/prisma/enums";
+  BeneficiaryTypeEnum,
+  CurrencyEnum,
+} from "../../../generated/prisma/enums";
 
 export class UpdateBeneficiaryDto {
   @IsString()

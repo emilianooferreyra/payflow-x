@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from "@nestjs/common";
 import { PrismaService } from "../../modules/prisma/prisma.service";
 
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

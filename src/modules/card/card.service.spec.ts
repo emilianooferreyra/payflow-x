@@ -79,9 +79,9 @@ describe("CardService", () => {
     it("should throw NotFoundException when card does not exist", async () => {
       mockPrisma.card.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.freeze("invalid", "user-1"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.freeze("invalid", "user-1")).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it("should throw UnprocessableEntityException when card is already frozen", async () => {
@@ -90,9 +90,9 @@ describe("CardService", () => {
         isFrozen: true,
       });
 
-      await expect(
-        service.freeze("card-1", "user-1"),
-      ).rejects.toThrow(UnprocessableEntityException);
+      await expect(service.freeze("card-1", "user-1")).rejects.toThrow(
+        UnprocessableEntityException,
+      );
     });
   });
 
@@ -119,17 +119,17 @@ describe("CardService", () => {
     it("should throw NotFoundException when card does not exist", async () => {
       mockPrisma.card.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.unfreeze("invalid", "user-1"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.unfreeze("invalid", "user-1")).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it("should throw UnprocessableEntityException when card is not frozen", async () => {
       mockPrisma.card.findFirst.mockResolvedValue(mockCard);
 
-      await expect(
-        service.unfreeze("card-1", "user-1"),
-      ).rejects.toThrow(UnprocessableEntityException);
+      await expect(service.unfreeze("card-1", "user-1")).rejects.toThrow(
+        UnprocessableEntityException,
+      );
     });
   });
 });

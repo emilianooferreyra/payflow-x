@@ -80,7 +80,7 @@ describe("PasswordRecoveryService", () => {
       expect(result.valid).toBe(true);
       expect(mockTokensService.validateToken).toHaveBeenCalledWith({
         userId: "user-1",
-        type:     AuthorizationTokenEnum.RECOVERY_PASSWORD,
+        type: AuthorizationTokenEnum.RECOVERY_PASSWORD,
         token: "ABC123",
       });
     });
@@ -109,7 +109,7 @@ describe("PasswordRecoveryService", () => {
       });
       expect(mockTokensService.revokeToken).toHaveBeenCalledWith({
         userId: "user-1",
-        type:     AuthorizationTokenEnum.RECOVERY_PASSWORD,
+        type: AuthorizationTokenEnum.RECOVERY_PASSWORD,
       });
     });
   });

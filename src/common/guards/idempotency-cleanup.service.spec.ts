@@ -27,8 +27,7 @@ describe("IdempotencyCleanupService", () => {
 
       expect(mockPrisma.idempotencyRecord.deleteMany).toHaveBeenCalledTimes(1);
 
-      const callArg =
-        mockPrisma.idempotencyRecord.deleteMany.mock.calls[0][0];
+      const callArg = mockPrisma.idempotencyRecord.deleteMany.mock.calls[0][0];
       expect(callArg.where.createdAt.lt).toBeInstanceOf(Date);
 
       // Verify the cutoff is approximately 24h ago

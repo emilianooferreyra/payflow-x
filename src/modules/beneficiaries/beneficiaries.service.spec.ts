@@ -22,9 +22,9 @@ describe("BeneficiariesService", () => {
 
       const result = await service.create("user-1", {
         alias: "Test",
-        beneficiaryType: "CBU" as any,
+        beneficiaryType: "CBU",
         accountNumber: "123",
-        currency: "ARS" as any,
+        currency: "ARS",
         country: "AR",
         isActive: true,
       });
@@ -40,9 +40,9 @@ describe("BeneficiariesService", () => {
 
       await service.create("user-1", {
         alias: "Test",
-        beneficiaryType: "CBU" as any,
+        beneficiaryType: "CBU",
         accountNumber: "123",
-        currency: "ARS" as any,
+        currency: "ARS",
       });
 
       expect(mockPrisma.beneficiary.create).toHaveBeenCalledWith(
@@ -89,9 +89,9 @@ describe("BeneficiariesService", () => {
     it("should throw NotFoundException if not found", async () => {
       mockPrisma.beneficiary.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.findOne("user-1", "invalid"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.findOne("user-1", "invalid")).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -140,9 +140,9 @@ describe("BeneficiariesService", () => {
     it("should throw if beneficiary not found", async () => {
       mockPrisma.beneficiary.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.remove("user-1", "invalid"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.remove("user-1", "invalid")).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

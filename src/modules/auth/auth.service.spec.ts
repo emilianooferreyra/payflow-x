@@ -1,8 +1,5 @@
 import { Test } from "@nestjs/testing";
-import {
-  BadRequestException,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { AuthService } from "./auth.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -77,7 +74,10 @@ describe("AuthService", () => {
         { provide: EmailsService, useValue: mockEmailsService },
         { provide: SessionTokenService, useValue: mockSessionTokenService },
         { provide: TwoFactorService, useValue: mockTwoFactorService },
-        { provide: PasswordRecoveryService, useValue: mockPasswordRecoveryService },
+        {
+          provide: PasswordRecoveryService,
+          useValue: mockPasswordRecoveryService,
+        },
       ],
     }).compile();
 
@@ -103,14 +103,14 @@ describe("AuthService", () => {
       const res = { cookie: jest.fn(), clearCookie: jest.fn() };
 
       const result = await service.login(
-        { email: "test@example.com", password: "pass" } as any,
+        { email: "test@example.com", password: "pass" },
         res,
         req,
       );
 
-      expect(
-        (result as { user: { email: string } }).user.email,
-      ).toBe("test@example.com");
+      expect((result as { user: { email: string } }).user.email).toBe(
+        "test@example.com",
+      );
     });
 
     it("should require 2FA when trusted_device cookie is missing", async () => {
@@ -124,7 +124,7 @@ describe("AuthService", () => {
       const res = { cookie: jest.fn(), clearCookie: jest.fn() };
 
       const result = await service.login(
-        { email: "test@example.com", password: "pass" } as any,
+        { email: "test@example.com", password: "pass" },
         res,
         req,
       );
@@ -166,14 +166,16 @@ describe("AuthService", () => {
           email: "test@test.com",
           password: "Password123!",
           name: "Test",
-        } as any,
+        },
         res,
       );
 
       expect((result as { user: { email: string } }).user.email).toBe(
         "test@test.com",
       );
-      expect(mockSessionTokenService.createSessionWithTokens).toHaveBeenCalled();
+      expect(
+        mockSessionTokenService.createSessionWithTokens,
+      ).toHaveBeenCalled();
     });
   });
 

@@ -52,10 +52,7 @@ export class AuthService {
   ) {
     const user = await this.usersService.findOne({ email: dto.email });
 
-    const isValid = await this.hashService.verify(
-      user.password!,
-      dto.password,
-    );
+    const isValid = await this.hashService.verify(user.password!, dto.password);
     if (!isValid) throw new UnauthorizedException("Invalid credentials");
 
     if (user.twoFactorEnabled) {
@@ -100,12 +97,7 @@ export class AuthService {
     return { user: { id: user.id, email: user.email, name: user.name } };
   }
 
-  async refresh(
-    userId: string,
-    sessionId: string,
-    refreshToken: string,
-    res,
-  ) {
+  async refresh(userId: string, sessionId: string, refreshToken: string, res) {
     try {
       const session = await this.sessionService.findOne({
         id: sessionId,

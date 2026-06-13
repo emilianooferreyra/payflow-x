@@ -28,7 +28,14 @@ export class WebhookService {
     });
 
     for (const endpoint of endpoints) {
-      await this.deliver(endpoint.id, endpoint.url, endpoint.secret, event.type, payload, 0);
+      await this.deliver(
+        endpoint.id,
+        endpoint.url,
+        endpoint.secret,
+        event.type,
+        payload,
+        0,
+      );
     }
   }
 
@@ -40,7 +47,9 @@ export class WebhookService {
     payload: string,
     attempt: number,
   ) {
-    const signature = createHmac("sha256", secret).update(payload).digest("hex");
+    const signature = createHmac("sha256", secret)
+      .update(payload)
+      .digest("hex");
 
     const delivery = await this.prisma.webhookDelivery.create({
       data: {
@@ -72,7 +81,14 @@ export class WebhookService {
       });
 
       if (!response.ok && attempt + 1 < this.MAX_ATTEMPTS) {
-        this.scheduleRetry(endpointId, url, secret, event, payload, attempt + 1);
+        this.scheduleRetry(
+          endpointId,
+          url,
+          secret,
+          event,
+          payload,
+          attempt + 1,
+        );
       }
     } catch (error) {
       this.logger.warn(`Webhook delivery failed: ${url} — ${error}`);
@@ -86,7 +102,14 @@ export class WebhookService {
       });
 
       if (attempt + 1 < this.MAX_ATTEMPTS) {
-        this.scheduleRetry(endpointId, url, secret, event, payload, attempt + 1);
+        this.scheduleRetry(
+          endpointId,
+          url,
+          secret,
+          event,
+          payload,
+          attempt + 1,
+        );
       }
     }
   }
