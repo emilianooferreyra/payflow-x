@@ -1,96 +1,92 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import {
-  INestApplication,
-  ValidationPipe,
-  VersioningType,
-} from "@nestjs/common";
-import request from "supertest";
-import cookieParser from "cookie-parser";
-import helmet from "helmet";
+import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { AppModule } from "../src/app.module";
+import request from "supertest";
 import { PrismaService } from "../src/modules/prisma/prisma.service";
-import { mockPrisma, makeWallet, makeSession } from "../src/common/testing";
-import { GlobalExceptionFilter } from "../src/common/filters/http-exception.filter";
+import { setupE2eApp } from "./setup-app";
+import { cleanDatabase } from "./db-cleanup";
 
 const BASE = "/api/v1/wallet";
 
 describe("Wallet (e2e)", () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   let jwtService: JwtService;
   let accessToken: string;
+  let walletId: string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(PrismaService)
-      .useValue(mockPrisma)
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-
-    app.use(helmet());
-    app.use(cookieParser());
-
-    app.setGlobalPrefix("api");
-    app.enableVersioning({
-      type: VersioningType.URI,
-      defaultVersion: "1",
-    });
-
-    app.enableCors({ origin: "*", credentials: true });
-
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.useGlobalFilters(new GlobalExceptionFilter());
-
-    await app.init();
-
+    const { app: a, moduleFixture } = await setupE2eApp();
+    app = a;
+    prisma = moduleFixture.get(PrismaService);
     jwtService = moduleFixture.get(JwtService);
-    accessToken = jwtService.sign({ sub: "user-1", sessionId: "session-1" });
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  beforeEach(() => {
-    jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
-      fn(mockPrisma),
-    );
+  beforeEach(async () => {
+    await cleanDatabase(prisma);
+
+    await prisma.user.create({
+      data: {
+        id: "wallet-user-id",
+        email: "wallet@test.com",
+        password: "hashed",
+        name: "Wallet Test",
+        status: "ACTIVE",
+        authProvider: "LOCAL",
+      },
+    });
+
+    await prisma.session.create({
+      data: {
+        id: "wallet-session-id",
+        userId: "wallet-user-id",
+        refreshToken: "hashed-refresh-token",
+        isActive: true,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    await prisma.kycVerification.create({
+      data: {
+        userId: "wallet-user-id",
+        status: "APPROVED",
+      },
+    });
+
+    accessToken = jwtService.sign({
+      sub: "wallet-user-id",
+      sessionId: "wallet-session-id",
+    });
   });
 
   const authCookie = () => `access_token=${accessToken}`;
-  const activeSession = makeSession({
-    id: "session-1",
-    userId: "user-1",
-    isActive: true,
-  });
-  const approvedKyc = { status: "APPROVED" };
-
-  function mockAuth() {
-    mockPrisma.session.findUnique.mockResolvedValue(activeSession);
-  }
-
-  function mockWebhookEmpty() {
-    mockPrisma.webhookEndpoint.findMany.mockResolvedValue([]);
-  }
 
   describe("GET /wallet", () => {
-    it("should return wallets for authenticated user", async () => {
-      mockAuth();
-      mockPrisma.wallet.findMany.mockResolvedValue([
-        makeWallet({ userId: "user-1", currency: "ARS", balance: 5000 }),
-        makeWallet({ userId: "user-1", currency: "USD", balance: 100 }),
-      ]);
+    beforeEach(async () => {
+      await prisma.wallet.create({
+        data: {
+          id: "wallet-ars-id",
+          userId: "wallet-user-id",
+          currency: "ARS",
+          balance: 5000,
+          version: 1,
+        },
+      });
+      await prisma.wallet.create({
+        data: {
+          id: "wallet-usd-id",
+          userId: "wallet-user-id",
+          currency: "USD",
+          balance: 100,
+          version: 1,
+        },
+      });
+    });
 
+    it("should return wallets for authenticated user", async () => {
       const res = await request(app.getHttpServer())
         .get(BASE)
         .set("Cookie", authCookie())
@@ -106,18 +102,14 @@ describe("Wallet (e2e)", () => {
 
   describe("POST /wallet/deposit", () => {
     it("should deposit and create transaction", async () => {
-      mockAuth();
-      mockWebhookEmpty();
-      const wallet = makeWallet({ userId: "user-1", balance: 1000 });
-      mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
-      mockPrisma.wallet.updateMany.mockResolvedValue({ count: 1 });
-      mockPrisma.transaction.create.mockResolvedValue({
-        id: "tx-1",
-        walletId: wallet.id,
-        type: "DEPOSIT",
-        amount: 500,
-        currency: "ARS",
-        status: "COMPLETED",
+      await prisma.wallet.create({
+        data: {
+          id: "deposit-wallet-id",
+          userId: "wallet-user-id",
+          currency: "ARS",
+          balance: 1000,
+          version: 1,
+        },
       });
 
       const res = await request(app.getHttpServer())
@@ -130,21 +122,6 @@ describe("Wallet (e2e)", () => {
     });
 
     it("should create wallet on first deposit", async () => {
-      mockAuth();
-      mockWebhookEmpty();
-      mockPrisma.wallet.findUnique.mockResolvedValue(null);
-      mockPrisma.wallet.create.mockResolvedValue(
-        makeWallet({ userId: "user-1", balance: 500 }),
-      );
-      mockPrisma.wallet.updateMany.mockResolvedValue({ count: 1 });
-      mockPrisma.transaction.create.mockResolvedValue({
-        id: "tx-1",
-        type: "DEPOSIT",
-        amount: 500,
-        currency: "ARS",
-        status: "COMPLETED",
-      });
-
       const res = await request(app.getHttpServer())
         .post(`${BASE}/deposit`)
         .set("Cookie", authCookie())
@@ -155,9 +132,6 @@ describe("Wallet (e2e)", () => {
     });
 
     it("should return 400 for invalid amount", async () => {
-      mockAuth();
-      mockWebhookEmpty();
-
       await request(app.getHttpServer())
         .post(`${BASE}/deposit`)
         .set("Cookie", authCookie())
@@ -167,36 +141,29 @@ describe("Wallet (e2e)", () => {
   });
 
   describe("POST /wallet/withdraw", () => {
-    it("should withdraw and create transaction", async () => {
-      mockAuth();
-      mockWebhookEmpty();
-      mockPrisma.kycVerification.findUnique.mockResolvedValue(approvedKyc);
-      const wallet = makeWallet({ userId: "user-1", balance: 1000 });
-      mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
-      mockPrisma.wallet.updateMany.mockResolvedValue({ count: 1 });
-      mockPrisma.transaction.create.mockResolvedValue({
-        id: "tx-2",
-        walletId: wallet.id,
-        type: "WITHDRAWAL",
-        amount: 500,
-        currency: "ARS",
-        status: "COMPLETED",
+    beforeEach(async () => {
+      await prisma.wallet.create({
+        data: {
+          id: "withdraw-wallet-id",
+          userId: "wallet-user-id",
+          currency: "ARS",
+          balance: 1000,
+          version: 1,
+        },
       });
+    });
 
-      await request(app.getHttpServer())
+    it("should withdraw and create transaction", async () => {
+      const res = await request(app.getHttpServer())
         .post(`${BASE}/withdraw`)
         .set("Cookie", authCookie())
         .send({ amount: 500, currency: "ARS" })
         .expect(201);
+
+      expect(res.body.type).toBe("WITHDRAWAL");
     });
 
     it("should return 422 on insufficient balance", async () => {
-      mockAuth();
-      mockPrisma.kycVerification.findUnique.mockResolvedValue(approvedKyc);
-      mockPrisma.wallet.findUnique.mockResolvedValue(
-        makeWallet({ userId: "user-1", balance: 100 }),
-      );
-
       await request(app.getHttpServer())
         .post(`${BASE}/withdraw`)
         .set("Cookie", authCookie())

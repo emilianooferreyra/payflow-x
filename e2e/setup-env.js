@@ -1,0 +1,11 @@
+process.env.PORT = "3000";
+process.env.ALLOWED_ORIGINS = "http://localhost:3000";
+process.env.DATABASE_URL = "postgresql://postgres:123456@localhost:5432/authdb";
+process.env.REDIS_URL = "redis://localhost:6379";
+process.env.RESEND_API_KEY = "re_mocked";
+process.env.RESEND_FROM_EMAIL = "test@test.com";
+process.env.JWT_ACCESS_SECRET = "test-access-secret-min-32-chars!!";
+process.env.JWT_REFRESH_SECRET = "test-refresh-secret-min-32-chars!";
+process.env.GOOGLE_CLIENT_ID = "test-client-id";
+process.env.GOOGLE_CLIENT_SECRET = "test-client-secret";
+process.env.GOOGLE_CALLBACK_URL = "http://localhost:3000/api/v1/auth/google/callback";

@@ -1,254 +1,202 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import {
-  INestApplication,
-  ValidationPipe,
-  VersioningType,
-} from "@nestjs/common";
-import request from "supertest";
-import cookieParser from "cookie-parser";
-import helmet from "helmet";
+import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { AppModule } from "../src/app.module";
+import request from "supertest";
 import { PrismaService } from "../src/modules/prisma/prisma.service";
-import { mockPrisma } from "../src/common/testing";
-import { GlobalExceptionFilter } from "../src/common/filters/http-exception.filter";
 import { HashService } from "../src/modules/hash/hash.service";
-import { envs } from "../src/config";
+import { setupE2eApp } from "./setup-app";
+import { cleanDatabase } from "./db-cleanup";
 
 const BASE = "/api/v1/auth";
 
 describe("Auth (e2e)", () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   let jwtService: JwtService;
   let hashService: HashService;
-  let realPasswordHash: string;
-  let realRefreshToken: string;
-  let refreshTokenHash: string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(PrismaService)
-      .useValue(mockPrisma)
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-
-    app.use(helmet());
-    app.use(cookieParser());
-
-    app.setGlobalPrefix("api");
-    app.enableVersioning({
-      type: VersioningType.URI,
-      defaultVersion: "1",
-    });
-
-    app.enableCors({ origin: "*", credentials: true });
-
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.useGlobalFilters(new GlobalExceptionFilter());
-
-    await app.init();
-
+    const { app: a, moduleFixture } = await setupE2eApp();
+    app = a;
+    prisma = moduleFixture.get(PrismaService);
     jwtService = moduleFixture.get(JwtService);
     hashService = moduleFixture.get(HashService);
-    realPasswordHash = await hashService.hash("Password123!");
-    realRefreshToken = await jwtService.signAsync(
-      { sub: "user-1", sessionId: "session-1" },
-      { secret: envs.JWT_REFRESH_SECRET, expiresIn: "7d" },
-    );
-    refreshTokenHash = await hashService.hash(realRefreshToken);
+    await cleanDatabase(prisma);
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  beforeEach(() => {
-    jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
-      fn(mockPrisma),
-    );
+  beforeEach(async () => {
+    await cleanDatabase(prisma);
   });
-
-  function sessionMocks() {
-    mockPrisma.session.findUnique.mockResolvedValue({
-      id: "session-1",
-      userId: "user-1",
-      refreshToken: "hashed-rt",
-      isActive: true,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-    mockPrisma.session.update.mockResolvedValue({
-      id: "session-1",
-      userId: "user-1",
-      refreshToken: "new-hashed-rt",
-      isActive: true,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-  }
 
   describe("POST /auth/register", () => {
     it("should register a new user and set auth cookies", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue({
-        id: "user-1",
-        email: "test@test.com",
-        name: "Test",
-        password: "hashed",
-        status: "DRAFT",
-        authProvider: "LOCAL",
-        country: "AR",
-        language: "es-ES",
-        emailConfirm: false,
-        twoFactorEnabled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      mockPrisma.session.create.mockResolvedValue({
-        id: "session-1",
-        userId: "user-1",
-        refreshToken: "hashed-rt",
-        isActive: true,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-      sessionMocks();
-
       const res = await request(app.getHttpServer())
         .post(`${BASE}/register`)
-        .send({
-          email: "test@test.com",
-          password: "Password123!",
-          name: "Test",
-        })
+        .send({ email: "test@test.com", password: "Password123!", name: "Test" })
         .expect(201);
 
       expect(res.headers["set-cookie"]).toBeDefined();
       const cookies = Array.isArray(res.headers["set-cookie"])
         ? res.headers["set-cookie"]
         : [res.headers["set-cookie"]];
-      expect(cookies.some((c: string) => c.startsWith("access_token="))).toBe(
-        true,
-      );
-      expect(cookies.some((c: string) => c.startsWith("refresh_token="))).toBe(
-        true,
-      );
+      expect(cookies.some((c: string) => c.startsWith("access_token="))).toBe(true);
+      expect(cookies.some((c: string) => c.startsWith("refresh_token="))).toBe(true);
+    });
+
+    it("should reject duplicate email", async () => {
+      await request(app.getHttpServer())
+        .post(`${BASE}/register`)
+        .send({ email: "dup@test.com", password: "Password123!", name: "Test" })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`${BASE}/register`)
+        .send({ email: "dup@test.com", password: "Password123!", name: "Test" })
+        .expect(400);
+    });
+
+    it("should return 400 for invalid email", async () => {
+      await request(app.getHttpServer())
+        .post(`${BASE}/register`)
+        .send({ email: "not-an-email", password: "Password123!", name: "Test" })
+        .expect(400);
     });
   });
 
   describe("POST /auth/login", () => {
-    it("should login and set auth cookies", async () => {
-      mockPrisma.user.findFirst.mockResolvedValue({
-        id: "user-1",
-        email: "test@test.com",
-        password: realPasswordHash,
-        name: "Test",
-        status: "ACTIVE",
-        authProvider: "LOCAL",
-        country: "AR",
-        language: "es-ES",
-        emailConfirm: false,
-        twoFactorEnabled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+    beforeEach(async () => {
+      const passwordHash = await hashService.hash("Password123!");
+      await prisma.user.create({
+        data: {
+          id: "login-user-id",
+          email: "login@test.com",
+          password: passwordHash,
+          name: "Login User",
+          status: "ACTIVE",
+          authProvider: "LOCAL",
+          country: "AR",
+          language: "es-ES",
+        },
       });
-      mockPrisma.session.create.mockResolvedValue({
-        id: "session-1",
-        userId: "user-1",
-        refreshToken: "hashed-rt",
-        isActive: true,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-      sessionMocks();
+    });
 
+    it("should login and set auth cookies", async () => {
       const res = await request(app.getHttpServer())
         .post(`${BASE}/login`)
-        .send({ email: "test@test.com", password: "Password123!" })
+        .send({ email: "login@test.com", password: "Password123!" })
         .expect(200);
 
       expect(res.headers["set-cookie"]).toBeDefined();
+    });
+
+    it("should return 401 for wrong password", async () => {
+      await request(app.getHttpServer())
+        .post(`${BASE}/login`)
+        .send({ email: "login@test.com", password: "WrongPassword1!" })
+        .expect(401);
+    });
+
+    it("should return 401 for non-existent user", async () => {
+      await request(app.getHttpServer())
+        .post(`${BASE}/login`)
+        .send({ email: "nonexistent@test.com", password: "Password123!" })
+        .expect(404);
     });
   });
 
   describe("POST /auth/refresh", () => {
-    it("should refresh tokens with valid refresh_token cookie", async () => {
-      mockPrisma.session.findUnique.mockResolvedValue({
-        id: "session-1",
-        userId: "user-1",
-        refreshToken: refreshTokenHash,
-        isActive: true,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(),
-        lastUsedAt: new Date(),
-        userAgent: null,
-        ipAddress: null,
-        location: null,
-      });
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: "user-1",
-        email: "test@test.com",
-        name: "Test",
-        status: "ACTIVE",
-        authProvider: "LOCAL",
-      });
-      mockPrisma.session.create.mockResolvedValue({
-        id: "session-2",
-        userId: "user-1",
-        refreshToken: "new-hashed-rt",
-        isActive: true,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-      mockPrisma.session.update.mockResolvedValue({
-        id: "session-1",
-        isActive: false,
+    let refreshToken: string;
+
+    beforeEach(async () => {
+      const passwordHash = await hashService.hash("Password123!");
+      await prisma.user.create({
+        data: {
+          id: "refresh-user-id",
+          email: "refresh@test.com",
+          password: passwordHash,
+          name: "Refresh User",
+          status: "ACTIVE",
+          authProvider: "LOCAL",
+        },
       });
 
+      refreshToken = await jwtService.signAsync(
+        { sub: "refresh-user-id", sessionId: "refresh-session-id" },
+        { secret: process.env.JWT_REFRESH_SECRET, expiresIn: "7d" },
+      );
+      const refreshTokenHash = await hashService.hash(refreshToken);
+
+      await prisma.session.create({
+        data: {
+          id: "refresh-session-id",
+          userId: "refresh-user-id",
+          refreshToken: refreshTokenHash,
+          isActive: true,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+    });
+
+    it("should refresh tokens with valid refresh_token cookie", async () => {
       const res = await request(app.getHttpServer())
         .post(`${BASE}/refresh`)
-        .set("Cookie", [`refresh_token=${realRefreshToken}`])
+        .set("Cookie", [`refresh_token=${refreshToken}`])
         .expect(200);
 
       expect(res.headers["set-cookie"]).toBeDefined();
     });
+
+    it("should return 401 without refresh token", async () => {
+      await request(app.getHttpServer()).post(`${BASE}/refresh`).expect(401);
+    });
   });
 
   describe("POST /auth/logout", () => {
-    it("should logout and clear auth cookies", async () => {
-      mockPrisma.session.findUnique.mockResolvedValue({
-        id: "session-1",
-        userId: "user-1",
-        refreshToken: refreshTokenHash,
-        isActive: true,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(),
-        lastUsedAt: new Date(),
-        userAgent: null,
-        ipAddress: null,
-        location: null,
-      });
-      mockPrisma.session.update.mockResolvedValue({
-        id: "session-1",
-        isActive: false,
+    let refreshToken: string;
+
+    beforeEach(async () => {
+      const passwordHash = await hashService.hash("Password123!");
+      await prisma.user.create({
+        data: {
+          id: "logout-user-id",
+          email: "logout@test.com",
+          password: passwordHash,
+          name: "Logout User",
+          status: "ACTIVE",
+          authProvider: "LOCAL",
+        },
       });
 
+      refreshToken = await jwtService.signAsync(
+        { sub: "logout-user-id", sessionId: "logout-session-id" },
+        { secret: process.env.JWT_REFRESH_SECRET, expiresIn: "7d" },
+      );
+      const refreshTokenHash = await hashService.hash(refreshToken);
+
+      await prisma.session.create({
+        data: {
+          id: "logout-session-id",
+          userId: "logout-user-id",
+          refreshToken: refreshTokenHash,
+          isActive: true,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+    });
+
+    it("should logout and clear auth cookies", async () => {
       const res = await request(app.getHttpServer())
         .post(`${BASE}/logout`)
-        .set("Cookie", [`refresh_token=${realRefreshToken}`])
+        .set("Cookie", [`refresh_token=${refreshToken}`])
         .expect(200);
 
       const cookies = Array.isArray(res.headers["set-cookie"])
         ? res.headers["set-cookie"]
         : [res.headers["set-cookie"]];
-      expect(cookies.some((c: string) => c.includes("access_token=;"))).toBe(
-        true,
-      );
+      expect(cookies.some((c: string) => c.includes("access_token=;"))).toBe(true);
     });
   });
 });

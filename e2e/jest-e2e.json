@@ -9,5 +9,7 @@
   "transformIgnorePatterns": ["/node_modules/(?!\\.pnpm|.*(?:otplib|@otplib|@scure|@noble))"],
   "moduleNameMapper": {
     "^(\\.{1,2}/.*)\\.js$": "$1"
-  }
+  },
+  "setupFiles": ["./setup.js"],
+  "globalSetup": "./global-setup.js"
 }
