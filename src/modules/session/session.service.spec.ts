@@ -20,7 +20,7 @@ describe("SessionService", () => {
       const result = await service.create({
         userId: session.userId,
         refreshToken: session.refreshToken,
-        expiresAt: session.expiresAt,
+        expiresAt: session.expiresAt!,
       });
 
       expect(result).toEqual(session);

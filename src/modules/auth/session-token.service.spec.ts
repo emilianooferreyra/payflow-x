@@ -4,6 +4,7 @@ import { JwtService } from "@nestjs/jwt";
 import { SessionService } from "../session/session.service";
 import { HashService } from "../hash/hash.service";
 import { SessionTokenService } from "./session-token.service";
+import { makeSession } from "../../common/testing";
 
 jest.mock("../../config", () => ({
   envs: {
@@ -134,15 +135,19 @@ describe("SessionTokenService", () => {
       const ip = "127.0.0.1";
       const expiresAt = expect.any(Date);
 
-      mockSessionService.create.mockResolvedValue({ id: "session-1" });
+      mockSessionService.create.mockResolvedValue(
+        makeSession({ id: "session-1" }),
+      );
       mockJwtService.sign.mockReturnValue("mocked-access-token");
       mockJwtService.signAsync.mockResolvedValue("mocked-refresh-token");
       mockHashService.hash.mockResolvedValue("hashed-refresh-token");
-      mockSessionService.update.mockResolvedValue({
-        id: "session-1",
-        userId,
-        refreshToken: "hashed-refresh-token",
-      });
+      mockSessionService.update.mockResolvedValue(
+        makeSession({
+          id: "session-1",
+          userId,
+          refreshToken: "hashed-refresh-token",
+        }),
+      );
 
       const result = await service.createSessionWithTokens(
         userId,
@@ -151,7 +156,7 @@ describe("SessionTokenService", () => {
         ip,
       );
 
-      expect(result).toEqual({ id: "session-1" });
+      expect(result.id).toBe("session-1");
 
       expect(mockSessionService.create).toHaveBeenCalledWith({
         userId,

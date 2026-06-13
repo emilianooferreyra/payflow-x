@@ -67,7 +67,7 @@ export const makeSession = (
     ipAddress: string | null;
     location: string | null;
     isActive: boolean;
-    expiresAt: Date;
+    expiresAt: Date | null;
     createdAt: Date;
     lastUsedAt: Date;
   }> = {},
@@ -81,7 +81,7 @@ export const makeSession = (
   isActive: true,
   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   createdAt: new Date(),
-  updatedAt: new Date(),
+  lastUsedAt: new Date(),
   ...overrides,
 });
 
