@@ -102,7 +102,7 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "transformIgnorePatterns": ["/node_modules/(?!otplib|@otplib|qrcode)"],
+    "transformIgnorePatterns": ["/node_modules/(?!\\.pnpm|.*(?:otplib|@otplib|qrcode|@scure|@noble))"],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },

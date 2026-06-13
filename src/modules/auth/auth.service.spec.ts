@@ -12,16 +12,9 @@ import { SessionService } from "../session/session.service";
 import { TokensService } from "../tokens/tokens.service";
 import { EmailsService } from "../emails/emails.service";
 import { mockPrisma, makeUser } from "../../common/testing";
-
-let mockOtpVerify = jest.fn(() => ({ valid: true }));
-
-jest.mock("otplib", () => ({
-  generateSecret: jest.fn(() => "mocked-secret"),
-  generateURI: jest.fn(() => "mocked-uri"),
-  verify: (..._args: any[]) => mockOtpVerify(),
-}));
-
-jest.mock("qrcode", () => ({ toDataURL: jest.fn(() => "mocked-qr") }));
+import { SessionTokenService } from "./session-token.service";
+import { TwoFactorService } from "./two-factor.service";
+import { PasswordRecoveryService } from "./password-recovery.service";
 
 describe("AuthService", () => {
   let service: AuthService;
@@ -52,10 +45,24 @@ describe("AuthService", () => {
     signAsync: jest.fn(),
     verify: jest.fn(),
   };
-
-  beforeAll(() => {
-    mockOtpVerify.mockReturnValue({ valid: true });
-  });
+  const mockSessionTokenService = {
+    createSessionWithTokens: jest.fn(),
+    generateTokens: jest.fn(),
+    setTokenCookies: jest.fn(),
+    clearTokenCookies: jest.fn(),
+  };
+  const mockTwoFactorService = {
+    generateTwoFactor: jest.fn(),
+    enableTwoFactor: jest.fn(),
+    disableTwoFactor: jest.fn(),
+    verifyTwoFactor: jest.fn(),
+    regenerateBackupCodes: jest.fn(),
+  };
+  const mockPasswordRecoveryService = {
+    forgotPassword: jest.fn(),
+    verifyOtp: jest.fn(),
+    resetPassword: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -68,118 +75,15 @@ describe("AuthService", () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: TokensService, useValue: mockTokensService },
         { provide: EmailsService, useValue: mockEmailsService },
+        { provide: SessionTokenService, useValue: mockSessionTokenService },
+        { provide: TwoFactorService, useValue: mockTwoFactorService },
+        { provide: PasswordRecoveryService, useValue: mockPasswordRecoveryService },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     jest.resetAllMocks();
-    mockOtpVerify.mockReturnValue({ valid: true });
     mockJwtService.signAsync.mockResolvedValue("mocked-refresh-token");
-  });
-
-  describe("enableTwoFactor", () => {
-    it("should generate 10 backup codes on enable", async () => {
-      mockUserService.findOne.mockResolvedValue(
-        makeUser({ twoFactorSecret: "secret" }),
-      );
-      mockHashService.hash.mockResolvedValue("hashed");
-      mockPrisma.userBackupCode.createMany.mockResolvedValue({ count: 10 });
-
-      const result = await service.enableTwoFactor("user-1", "123456");
-
-      expect(result.backupCodes).toHaveLength(10);
-      expect(mockPrisma.userBackupCode.createMany).toHaveBeenCalled();
-    });
-  });
-
-  describe("verifyTwoFactor with backup codes", () => {
-    it("should verify backup code and mark as used", async () => {
-      mockUserService.findOne.mockResolvedValue(
-        makeUser({ twoFactorEnabled: true, twoFactorSecret: "secret" }),
-      );
-      mockHashService.verify.mockResolvedValue(true);
-      mockPrisma.userBackupCode.findMany.mockResolvedValue([
-        { id: "bc-1", code: "hashed", usedAt: null },
-      ]);
-      mockSessionService.create.mockResolvedValue({ id: "session-1" });
-
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
-      const result = await service.verifyTwoFactor(
-        "user-1",
-        "ABCD1234",
-        res,
-      );
-
-      expect((result as { user: { email: string } }).user.email).toBe("test@example.com");
-      expect(mockPrisma.userBackupCode.update).toHaveBeenCalledWith({
-        where: { id: "bc-1" },
-        data: { usedAt: expect.any(Date) },
-      });
-    });
-
-    it("should reject invalid backup code", async () => {
-      mockUserService.findOne.mockResolvedValue(
-        makeUser({ twoFactorEnabled: true, twoFactorSecret: "secret" }),
-      );
-      mockHashService.verify.mockRejectedValue(new Error("should not be called"));
-      mockPrisma.userBackupCode.findMany.mockResolvedValue([]);
-
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
-      await expect(
-        service.verifyTwoFactor("user-1", "ABCD1234", res),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-  });
-
-  describe("rate limiting", () => {
-    it("should block after 5 failed attempts", async () => {
-      mockUserService.findOne.mockResolvedValue(
-        makeUser({ twoFactorEnabled: true, twoFactorSecret: "secret" }),
-      );
-      mockOtpVerify.mockReturnValue({ valid: false });
-      mockPrisma.userBackupCode.findMany.mockResolvedValue([]);
-
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
-      for (let i = 0; i < 5; i++) {
-        await expect(
-          service.verifyTwoFactor("user-1", "000000", res),
-        ).rejects.toThrow(UnauthorizedException);
-      }
-
-      await expect(
-        service.verifyTwoFactor("user-1", "000000", res),
-      ).rejects.toThrow("Too many 2FA attempts");
-    });
-  });
-
-  describe("regenerateBackupCodes", () => {
-    it("should replace all backup codes", async () => {
-      mockPrisma.userBackupCode.deleteMany.mockResolvedValue({ count: 10 });
-      mockHashService.hash.mockResolvedValue("hashed");
-      mockPrisma.userBackupCode.createMany.mockResolvedValue({ count: 10 });
-
-      const result = await service.regenerateBackupCodes("user-1");
-
-      expect(result.backupCodes).toHaveLength(10);
-      expect(mockPrisma.userBackupCode.deleteMany).toHaveBeenCalledWith({
-        where: { userId: "user-1" },
-      });
-    });
-  });
-
-  describe("disableTwoFactor", () => {
-    it("should delete backup codes when disabling 2FA", async () => {
-      mockUserService.findOne.mockResolvedValue(
-        makeUser({ twoFactorEnabled: true, twoFactorSecret: "secret" }),
-      );
-      mockPrisma.userBackupCode.deleteMany.mockResolvedValue({ count: 10 });
-
-      await service.disableTwoFactor("user-1", "123456");
-
-      expect(mockPrisma.userBackupCode.deleteMany).toHaveBeenCalledWith({
-        where: { userId: "user-1" },
-      });
-    });
   });
 
   describe("login with trusted device", () => {
@@ -189,7 +93,9 @@ describe("AuthService", () => {
       );
       mockHashService.verify.mockResolvedValue(true);
       mockJwtService.verify.mockReturnValue({ sub: "user-1" } as any);
-      mockSessionService.create.mockResolvedValue({ id: "session-1" });
+      mockSessionTokenService.createSessionWithTokens.mockResolvedValue({
+        id: "session-1",
+      });
 
       const req = {
         cookies: { trusted_device: "valid-token" },
@@ -202,7 +108,86 @@ describe("AuthService", () => {
         req,
       );
 
-      expect((result as { user: { email: string } }).user.email).toBe("test@example.com");
+      expect(
+        (result as { user: { email: string } }).user.email,
+      ).toBe("test@example.com");
+    });
+
+    it("should require 2FA when trusted_device cookie is missing", async () => {
+      mockUserService.findOne.mockResolvedValue(
+        makeUser({ twoFactorEnabled: true, password: "hashed" }),
+      );
+      mockHashService.verify.mockResolvedValue(true);
+      mockJwtService.sign.mockReturnValue("pending-token");
+
+      const req = { cookies: {} } as any;
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+
+      const result = await service.login(
+        { email: "test@example.com", password: "pass" } as any,
+        res,
+        req,
+      );
+
+      expect((result as { requiresTwoFactor: boolean }).requiresTwoFactor).toBe(
+        true,
+      );
+    });
+
+    it("should reject invalid password", async () => {
+      mockUserService.findOne.mockResolvedValue(
+        makeUser({ password: "hashed" }),
+      );
+      mockHashService.verify.mockResolvedValue(false);
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+
+      await expect(
+        service.login(
+          { email: "test@example.com", password: "wrong" } as any,
+          res,
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe("register", () => {
+    it("should create user and session", async () => {
+      mockUserService.create.mockResolvedValue(
+        makeUser({ id: "user-1", email: "test@test.com" }),
+      );
+      mockSessionTokenService.createSessionWithTokens.mockResolvedValue({
+        id: "session-1",
+      });
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const result = await service.register(
+        {
+          email: "test@test.com",
+          password: "Password123!",
+          name: "Test",
+        } as any,
+        res,
+      );
+
+      expect((result as { user: { email: string } }).user.email).toBe(
+        "test@test.com",
+      );
+      expect(mockSessionTokenService.createSessionWithTokens).toHaveBeenCalled();
+    });
+  });
+
+  describe("logout", () => {
+    it("should delete session and clear cookies", async () => {
+      mockSessionService.delete.mockResolvedValue({ id: "session-1" });
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const result = await service.logout("user-1", "session-1", res);
+
+      expect(result.message).toBe("Logged out successfully");
+      expect(mockSessionTokenService.clearTokenCookies).toHaveBeenCalledWith(
+        res,
+      );
     });
   });
 });
