@@ -15,7 +15,7 @@ services:
       - PORT=${PORT}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - DATABASE_URL=postgresql://postgres:123456@auth-db:5432/authdb
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=redis://auth-redis:6379
       - RESEND_API_KEY=${RESEND_API_KEY}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}

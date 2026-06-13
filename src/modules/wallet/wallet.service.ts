@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
@@ -10,11 +11,13 @@ import { WebhookService } from "../webhook/webhook.service";
 import {
   DepositInterface,
   ExchangeInterface,
+  SendInterface,
   WithdrawInterface,
 } from "./interfaces/wallet.interface";
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
   private readonly MAX_RETRIES = 3;
 
   constructor(
@@ -30,9 +33,12 @@ export class WalletService {
   }
 
   async deposit({ userId, currency, amount, description }: DepositInterface) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let transaction: any;
+
     for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        transaction = await this.prisma.$transaction(async (tx) => {
           let wallet = await tx.wallet.findUnique({
             where: { userId_currency: { userId, currency } },
           });
@@ -55,7 +61,7 @@ export class WalletService {
             throw new ConflictException("Optimistic lock conflict");
           }
 
-          const transaction = await tx.transaction.create({
+          return tx.transaction.create({
             data: {
               walletId: wallet.id,
               type: "DEPOSIT",
@@ -65,20 +71,9 @@ export class WalletService {
               description: description ?? `Depósito ${currency}`,
             },
           });
-
-          this.webhookService.dispatch({
-            type: "deposit.confirmed",
-            data: {
-              walletId: wallet.id,
-              userId,
-              amount,
-              currency,
-              transactionId: transaction.id,
-            },
-          });
-
-          return transaction;
         });
+
+        break; // transaction committed, exit retry loop
       } catch (error) {
         if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
           continue;
@@ -87,13 +82,32 @@ export class WalletService {
       }
     }
 
-    throw new Error("Unreachable");
+    // Fire webhook AFTER transaction commits (outside the tx to avoid blocking it)
+    await this.webhookService
+      .dispatch({
+        type: "deposit.confirmed",
+        data: {
+          walletId: transaction.walletId,
+          userId,
+          amount,
+          currency,
+          transactionId: transaction.id,
+        },
+      })
+      .catch((err) =>
+        this.logger.warn(`Webhook dispatch failed for deposit ${transaction.id}: ${err.message}`),
+      );
+
+    return transaction;
   }
 
   async withdraw({ userId, currency, amount, description }: WithdrawInterface) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let transaction: any;
+
     for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        transaction = await this.prisma.$transaction(async (tx) => {
           const wallet = await tx.wallet.findUnique({
             where: { userId_currency: { userId, currency } },
           });
@@ -116,7 +130,7 @@ export class WalletService {
             throw new ConflictException("Optimistic lock conflict");
           }
 
-          const transaction = await tx.transaction.create({
+          return tx.transaction.create({
             data: {
               walletId: wallet.id,
               type: "WITHDRAWAL",
@@ -126,20 +140,9 @@ export class WalletService {
               description: description ?? `Retiro ${currency}`,
             },
           });
-
-          this.webhookService.dispatch({
-            type: "withdraw.completed",
-            data: {
-              walletId: wallet.id,
-              userId,
-              amount,
-              currency,
-              transactionId: transaction.id,
-            },
-          });
-
-          return transaction;
         });
+
+        break; // transaction committed, exit retry loop
       } catch (error) {
         if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
           continue;
@@ -150,7 +153,27 @@ export class WalletService {
       }
     }
 
-    throw new Error("Unreachable");
+    if (!transaction) {
+      throw new Error("Unreachable");
+    }
+
+    // Fire webhook AFTER transaction commits (outside the tx to avoid blocking it)
+    await this.webhookService
+      .dispatch({
+        type: "withdraw.completed",
+        data: {
+          walletId: transaction.walletId,
+          userId,
+          amount,
+          currency,
+          transactionId: transaction.id,
+        },
+      })
+      .catch((err) =>
+        this.logger.warn(`Webhook dispatch failed for withdrawal ${transaction.id}: ${err.message}`),
+      );
+
+    return transaction;
   }
 
   async exchange({
@@ -248,5 +271,93 @@ export class WalletService {
     }
 
     throw new Error("Unreachable");
+  }
+
+  async send({ userId, beneficiaryId, amount }: SendInterface) {
+    const beneficiary = await this.prisma.beneficiary.findFirst({
+      where: { id: beneficiaryId, userId, isActive: true },
+    });
+
+    if (!beneficiary) {
+      throw new NotFoundException("Beneficiary not found");
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let transaction: any;
+
+    for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
+      try {
+        transaction = await this.prisma.$transaction(async (tx) => {
+          const wallet = await tx.wallet.findUnique({
+            where: { userId_currency: { userId, currency: beneficiary.currency } },
+          });
+
+          if (!wallet) throw new NotFoundException(`Wallet ${beneficiary.currency} not found`);
+          if (Number(wallet.balance) < amount) {
+            throw new UnprocessableEntityException("Insufficient balance");
+          }
+
+          const { count } = await tx.wallet.updateMany({
+            where: { id: wallet.id, version: wallet.version },
+            data: {
+              balance: { decrement: amount },
+              version: { increment: 1 },
+            },
+          });
+
+          if (count === 0) {
+            throw new ConflictException("Optimistic lock conflict");
+          }
+
+          return tx.transaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "TRANSFER",
+              amount,
+              currency: beneficiary.currency,
+              status: "COMPLETED",
+              description: `Envío a ${beneficiary.alias}`,
+              metadata: {
+                beneficiaryId: beneficiary.id,
+                beneficiaryAlias: beneficiary.alias,
+                beneficiaryType: beneficiary.beneficiaryType,
+                accountNumber: beneficiary.accountNumber,
+                bankName: beneficiary.bankName,
+              },
+            },
+          });
+        });
+
+        break;
+      } catch (error) {
+        if (error instanceof ConflictException && attempt < this.MAX_RETRIES - 1) {
+          continue;
+        }
+        if (error instanceof UnprocessableEntityException) throw error;
+        if (error instanceof NotFoundException) throw error;
+        throw error;
+      }
+    }
+
+    if (!transaction) {
+      throw new Error("Unreachable");
+    }
+
+    await this.webhookService
+      .dispatch({
+        type: "withdraw.completed",
+        data: {
+          walletId: transaction.walletId,
+          userId,
+          amount,
+          currency: beneficiary.currency,
+          transactionId: transaction.id,
+        },
+      })
+      .catch((err) =>
+        this.logger.warn(`Webhook dispatch failed for send ${transaction.id}: ${err.message}`),
+      );
+
+    return transaction;
   }
 }

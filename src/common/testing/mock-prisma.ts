@@ -57,6 +57,7 @@ const mockPrisma = {
   kycVerification: createMockedModel(),
   auditLog: createMockedModel(),
   userBackupCode: createMockedModel(),
+  beneficiary: createMockedModel(),
   webhookEndpoint: createMockedModel(),
   webhookDelivery: createMockedModel(),
   idempotencyRecord: createMockedModel(),

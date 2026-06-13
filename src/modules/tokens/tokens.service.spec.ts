@@ -35,9 +35,6 @@ describe("TokensService", () => {
   const userId = "user-1";
   const type = AuthorizationTokenEnum.RECOVERY_PASSWORD;
 
-  // ---------------------------------------------------------------------------
-  // generateToken
-  // ---------------------------------------------------------------------------
   describe("generateToken", () => {
     it("should generate a 6-digit token and store it in cache", async () => {
       mockCache.set.mockResolvedValue(undefined);
@@ -75,9 +72,6 @@ describe("TokensService", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // validateToken
-  // ---------------------------------------------------------------------------
   describe("validateToken", () => {
     it("should return payload when token matches", async () => {
       const stored = { userId, type, token: "123456" };
@@ -124,9 +118,6 @@ describe("TokensService", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // revokeToken
-  // ---------------------------------------------------------------------------
   describe("revokeToken", () => {
     it("should delete token from cache and return true", async () => {
       mockCache.del.mockResolvedValue(undefined);

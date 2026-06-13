@@ -68,7 +68,7 @@ describe("IdempotencyCleanupService", () => {
       );
 
       // Clean up the interval to avoid test leaks
-      (service as any).beforeApplicationShutdown();
+      (service as any).onApplicationShutdown();
     });
   });
 });

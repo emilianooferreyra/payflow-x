@@ -20,3 +20,9 @@ export interface ExchangeInterface {
   toCurrency: CurrencyEnum;
   amount: number;
 }
+
+export interface SendInterface {
+  userId: string;
+  beneficiaryId: string;
+  amount: number;
+}

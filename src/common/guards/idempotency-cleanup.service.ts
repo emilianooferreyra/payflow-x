@@ -18,7 +18,7 @@ export class IdempotencyCleanupService
     this.timer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
   }
 
-  beforeApplicationShutdown() {
+  onApplicationShutdown() {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;

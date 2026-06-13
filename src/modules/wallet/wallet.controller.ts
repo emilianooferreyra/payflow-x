@@ -16,6 +16,7 @@ import { Idempotent } from "../../common/decorators/idempotent.decorator";
 import { DepositDto } from "./dto/deposit.dto";
 import { WithdrawDto } from "./dto/withdraw.dto";
 import { ExchangeDto } from "./dto/exchange.dto";
+import { SendDto } from "./dto/send.dto";
 
 @ApiTags("Wallet")
 @ApiCookieAuth()
@@ -50,5 +51,13 @@ export class WalletController {
   @Idempotent()
   async exchange(@CurrentUser() user, @Body() dto: ExchangeDto) {
     return this.walletService.exchange({ userId: user.userId, ...dto });
+  }
+
+  @Post("send")
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(KycGuard)
+  @Idempotent()
+  async send(@CurrentUser() user, @Body() dto: SendDto) {
+    return this.walletService.send({ userId: user.userId, ...dto });
   }
 }
