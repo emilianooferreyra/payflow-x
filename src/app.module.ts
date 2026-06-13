@@ -20,6 +20,7 @@ import { ExchangeRateModule } from "./modules/exchange-rate/exchange-rate.module
 import { KycModule } from "./modules/kyc/kyc.module";
 import { WebhookModule } from "./modules/webhook/webhook.module";
 import { BeneficiariesModule } from "./modules/beneficiaries/beneficiaries.module";
+import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.service";
 
 @Module({
   imports: [
@@ -49,6 +50,9 @@ import { BeneficiariesModule } from "./modules/beneficiaries/beneficiaries.modul
     BeneficiariesModule,
   ],
   controllers: [],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    IdempotencyCleanupService,
+  ],
 })
 export class AppModule {}
