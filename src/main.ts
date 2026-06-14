@@ -14,6 +14,7 @@ async function bootstrap() {
 
   app.use(helmet());
   app.use(cookieParser());
+  app.enableShutdownHooks();
 
   app.setGlobalPrefix("api");
 

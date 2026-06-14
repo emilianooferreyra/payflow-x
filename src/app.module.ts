@@ -20,6 +20,7 @@ import { ExchangeRateModule } from "./modules/exchange-rate/exchange-rate.module
 import { KycModule } from "./modules/kyc/kyc.module";
 import { WebhookModule } from "./modules/webhook/webhook.module";
 import { BeneficiariesModule } from "./modules/beneficiaries/beneficiaries.module";
+import { HealthModule } from "./modules/health/health.module";
 import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.service";
 
 @Module({
@@ -48,6 +49,7 @@ import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.s
     KycModule,
     WebhookModule,
     BeneficiariesModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [

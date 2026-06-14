@@ -32,6 +32,8 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.4",
+    "@nestjs/terminus": "^11.1.1",
+    "@nestjs/throttler": "^6.4.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "argon2": "^0.44.0",
@@ -41,6 +43,7 @@
     "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
+    "helmet": "^8.1.0",
     "otplib": "^13.4.1",
     "passport": "^0.7.0",
     "passport-custom": "^1.1.1",
@@ -49,13 +52,12 @@
     "passport-local": "^1.0.0",
     "pg": "^8.21.0",
     "qrcode": "^1.5.4",
+    "redis": "^6.0.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.4",
     "rxjs": "^7.8.1",
     "uuid": "^14.0.0",
-    "zod": "^4.4.3",
-    "@nestjs/throttler": "^6.4.0",
-    "helmet": "^8.1.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -87,9 +89,9 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0",
-    "tsx": "^4.19.2"
+    "typescript-eslint": "^8.20.0"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -102,7 +104,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "transformIgnorePatterns": ["/node_modules/(?!\\.pnpm|.*(?:otplib|@otplib|qrcode|@scure|@noble))"],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!\\.pnpm|.*(?:otplib|@otplib|qrcode|@scure|@noble))"
+    ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
