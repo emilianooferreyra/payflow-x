@@ -9,8 +9,10 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      - auth-db
-      - auth-redis
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_started
     environment:
       - PORT=${PORT}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
@@ -23,6 +25,9 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+    networks:
+      - frontend
+      - backend
 
   auth-db:
     container_name: auth-db
@@ -34,6 +39,13 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
       - POSTGRES_DB=authdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
 
   auth-redis:
     container_name: auth-redis
@@ -44,7 +56,16 @@ services:
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
+    networks:
+      - backend
 
 volumes:
   pgdata:
   redis_data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
