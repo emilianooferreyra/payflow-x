@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { IdempotencyCleanupService } from "./idempotency-cleanup.service";
 import { PrismaService } from "../../modules/prisma/prisma.service";
@@ -8,6 +9,8 @@ describe("IdempotencyCleanupService", () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    jest.spyOn(Logger.prototype, "log").mockImplementation();
+    jest.spyOn(Logger.prototype, "error").mockImplementation();
 
     const module = await Test.createTestingModule({
       providers: [
