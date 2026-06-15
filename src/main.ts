@@ -6,6 +6,10 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
+import {
+  LoggingInterceptor,
+  ResponseSerializationInterceptor,
+} from "./common/interceptors";
 
 async function bootstrap() {
   const logger = new Logger("PayFlow");
@@ -37,6 +41,10 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ResponseSerializationInterceptor(),
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("PayFlow API")

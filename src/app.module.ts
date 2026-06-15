@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { CacheModule } from "@nestjs/cache-manager";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
+import { LoggerModule } from "nestjs-pino";
 import { PrismaModule } from "./modules/prisma/prisma.module";
 import KeyvRedis from "@keyv/redis";
 import { envs } from "./config";
@@ -32,6 +33,16 @@ import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.s
         ttl: 5000,
         stores: [new KeyvRedis(envs.REDIS_URL)],
       }),
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport:
+          process.env.NODE_ENV !== "production"
+            ? { target: "pino-pretty" }
+            : undefined,
+        level: process.env.LOG_LEVEL ?? "info",
+        autoLogging: false,
+      },
     }),
     PrismaModule,
     UsersModule,
