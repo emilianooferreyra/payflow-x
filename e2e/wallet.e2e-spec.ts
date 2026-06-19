@@ -116,7 +116,7 @@ describe("Wallet (e2e)", () => {
       const res = await request(app.getHttpServer())
         .post(`${BASE}/deposit`)
         .set("Cookie", authCookie())
-        .send({ amount: 500, currency: "ARS" })
+        .send({ amount: "500", currency: "ARS" })
         .expect(201);
 
       expect(res.body.type).toBe("DEPOSIT");
@@ -126,7 +126,7 @@ describe("Wallet (e2e)", () => {
       const res = await request(app.getHttpServer())
         .post(`${BASE}/deposit`)
         .set("Cookie", authCookie())
-        .send({ amount: 500, currency: "ARS" })
+        .send({ amount: "500", currency: "ARS" })
         .expect(201);
 
       expect(res.body.type).toBe("DEPOSIT");
@@ -158,7 +158,7 @@ describe("Wallet (e2e)", () => {
       const res = await request(app.getHttpServer())
         .post(`${BASE}/withdraw`)
         .set("Cookie", authCookie())
-        .send({ amount: 500, currency: "ARS" })
+        .send({ amount: "500", currency: "ARS" })
         .expect(201);
 
       expect(res.body.type).toBe("WITHDRAWAL");
@@ -168,7 +168,7 @@ describe("Wallet (e2e)", () => {
       await request(app.getHttpServer())
         .post(`${BASE}/withdraw`)
         .set("Cookie", authCookie())
-        .send({ amount: 9999, currency: "ARS" })
+        .send({ amount: "9999", currency: "ARS" })
         .expect(422);
     });
   });
