@@ -13,14 +13,14 @@ export class UsersController {
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
-  async getMe(@CurrentUser() user: { userId: string }) {
+  async getMe(@CurrentUser() user) {
     return this.usersService.getProfile(user.userId);
   }
 
   @Patch("me")
   @UseGuards(JwtAuthGuard)
   async updateMe(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Body() body: UpdateUserDto,
   ) {
     return this.usersService.update({ id: user.userId, ...body });

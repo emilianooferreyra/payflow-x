@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CurrencyEnum } from "../../generated/prisma/enums";
+import { assertFound } from "../../common/utils/assert-found";
 
 const SUPPORTED_PAIRS: [CurrencyEnum, CurrencyEnum][] = [
   ["USD", "ARS"],
@@ -28,7 +29,7 @@ export class ExchangeRateService {
     return rates.filter(Boolean).map((rate) => ({
       fromCurrency: rate!.fromCurrency,
       toCurrency: rate!.toCurrency,
-      rate: Number(rate!.rate),
+      rate: rate!.rate,
       date: rate!.date,
     }));
   }
@@ -39,15 +40,12 @@ export class ExchangeRateService {
       orderBy: { date: "desc" },
     });
 
-    if (!rate)
-      throw new NotFoundException(
-        `Rate ${fromCurrency}/${toCurrency} not available`,
-      );
+    assertFound(rate, `Rate ${fromCurrency}/${toCurrency}`);
 
     return {
       fromCurrency: rate.fromCurrency,
       toCurrency: rate.toCurrency,
-      rate: Number(rate.rate),
+      rate: rate.rate,
       date: rate.date,
     };
   }
@@ -65,7 +63,7 @@ export class ExchangeRateService {
       );
 
     return rates.map((r) => ({
-      rate: Number(r.rate),
+      rate: r.rate,
       date: r.date,
     }));
   }

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertFound } from "../../common/utils/assert-found";
 import { CreateBeneficiaryDto } from "./dto/create-beneficiary.dto";
 import { UpdateBeneficiaryDto } from "./dto/update-beneficiary.dto";
 
@@ -29,9 +30,7 @@ export class BeneficiariesService {
     const beneficiary = await this.prisma.beneficiary.findFirst({
       where: { id, userId },
     });
-    if (!beneficiary) {
-      throw new NotFoundException("Beneficiary not found");
-    }
+    assertFound(beneficiary, "Beneficiary");
     return beneficiary;
   }
 

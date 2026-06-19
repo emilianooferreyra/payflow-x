@@ -1,5 +1,6 @@
-import { IsEnum, IsNumber, IsPositive, NotEquals } from "class-validator";
+import { IsEnum, IsString, Matches, NotEquals } from "class-validator";
 import { CurrencyEnum } from "../../../generated/prisma/enums";
+import { AMOUNT_PATTERN } from "./amount.dto";
 
 export class ExchangeDto {
   @IsEnum(CurrencyEnum)
@@ -9,7 +10,7 @@ export class ExchangeDto {
   @NotEquals("", { message: "toCurrency must differ from fromCurrency" })
   toCurrency!: CurrencyEnum;
 
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @IsPositive()
-  amount!: number;
+  @IsString()
+  @Matches(AMOUNT_PATTERN, { message: "amount must be a positive decimal string" })
+  amount!: string;
 }

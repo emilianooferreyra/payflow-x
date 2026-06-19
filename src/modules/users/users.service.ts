@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
 import {
   CreateUserInterface,
@@ -9,6 +8,7 @@ import {
   UpdateUserInterface,
 } from "./interfaces/users.interface";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertFound } from "../../common/utils/assert-found";
 import { HashService } from "../hash/hash.service";
 
 @Injectable()
@@ -115,7 +115,7 @@ export class UsersService {
       where: { id, email },
     });
 
-    if (!user) throw new NotFoundException("User not found");
+    assertFound(user, "User");
     return user;
   }
 
@@ -136,7 +136,7 @@ export class UsersService {
       },
     });
 
-    if (!user) throw new NotFoundException("User not found");
+    assertFound(user, "User");
     return user;
   }
 

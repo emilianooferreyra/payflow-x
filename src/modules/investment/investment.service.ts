@@ -1,9 +1,9 @@
 import {
   Injectable,
-  NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertFound } from "../../common/utils/assert-found";
 import {
   BuyAssetInterface,
   SellAssetInterface,
@@ -60,8 +60,8 @@ export class InvestmentService {
         }),
       ]);
 
-      if (!asset) throw new NotFoundException("Asset not found");
-      if (!usdWallet) throw new NotFoundException("USD wallet not found");
+      assertFound(asset, "Asset");
+      assertFound(usdWallet, "USD wallet");
       if (Number(usdWallet.balance) < amount) {
         throw new UnprocessableEntityException("Insufficient USD balance");
       }
@@ -137,8 +137,8 @@ export class InvestmentService {
         }),
       ]);
 
-      if (!investment) throw new NotFoundException("Investment not found");
-      if (!usdWallet) throw new NotFoundException("USD wallet not found");
+      assertFound(investment, "Investment");
+      assertFound(usdWallet, "USD wallet");
       if (Number(investment.quantity) < quantity) {
         throw new UnprocessableEntityException("Insufficient quantity");
       }

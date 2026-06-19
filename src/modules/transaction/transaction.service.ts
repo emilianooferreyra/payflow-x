@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertFound } from "../../common/utils/assert-found";
 import { GetTransactionsInterface } from "./interfaces/transaction.interface";
 
 @Injectable()
@@ -77,7 +78,7 @@ export class TransactionService {
       },
     });
 
-    if (!transaction) throw new NotFoundException("Transaction not found");
+    assertFound(transaction, "Transaction");
 
     return transaction;
   }

@@ -6,6 +6,7 @@ import {
   BeneficiaryTypeEnum,
   CurrencyEnum,
 } from "../../generated/prisma/enums.js";
+import { Prisma } from "../../generated/prisma/client.js";
 
 let counter = 0;
 const uniqueId = (): string => `test-id-${++counter}-${Date.now()}`;
@@ -152,7 +153,7 @@ export const makeWallet = (
     id: string;
     userId: string;
     currency: string;
-    balance: number;
+    balance: number | Prisma.Decimal;
     version: number;
     createdAt: Date;
     updatedAt: Date;

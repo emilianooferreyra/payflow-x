@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertFound } from "../../common/utils/assert-found";
 import {
   CreateSessionInterface,
   GetAllSessions,
@@ -54,7 +55,7 @@ export class SessionService {
       where: { id, userId },
     });
 
-    if (!session) throw new NotFoundException("Session not found");
+    assertFound(session, "Session");
 
     return session;
   }

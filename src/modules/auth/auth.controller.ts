@@ -80,7 +80,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(RefreshTokenGuard)
   async logout(
-    @CurrentUser() user: { userId: string; sessionId: string },
+    @CurrentUser() user,
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.logout(user.userId, user.sessionId, res);
@@ -107,14 +107,14 @@ export class AuthController {
   @Post("2fa/codes/regenerate")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async regenerateBackupCodes(@CurrentUser() user: { userId: string }) {
+  async regenerateBackupCodes(@CurrentUser() user) {
     return this.authService.regenerateBackupCodes(user.userId);
   }
 
   @Post("2fa/generate")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async generate2FA(@CurrentUser() user: { userId: string }) {
+  async generate2FA(@CurrentUser() user) {
     return this.authService.generateTwoFactor(user.userId);
   }
 
@@ -122,7 +122,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async enable2FA(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Body() dto: VerifyTwoFactorDto,
   ) {
     return this.authService.enableTwoFactor(user.userId, dto.code);
@@ -132,7 +132,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async disable2FA(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Body() dto: VerifyTwoFactorDto,
   ) {
     return this.authService.disableTwoFactor(user.userId, dto.code);
@@ -142,7 +142,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(TwoFactorPendingGuard)
   async verify2FA(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Body() dto: VerifyTwoFactorDto,
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
@@ -163,7 +163,7 @@ export class AuthController {
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
-    @CurrentUser() user: any,
+    @CurrentUser() user,
     @Res() res: Response,
     @Req() req: Request,
   ) {

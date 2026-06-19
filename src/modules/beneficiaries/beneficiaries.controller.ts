@@ -27,7 +27,7 @@ export class BeneficiariesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Body() dto: CreateBeneficiaryDto,
   ) {
     return this.beneficiariesService.create(user.userId, dto);
@@ -40,7 +40,7 @@ export class BeneficiariesController {
 
   @Get(":id")
   async findOne(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Param("id") id: string,
   ) {
     return this.beneficiariesService.findOne(user.userId, id);
@@ -48,7 +48,7 @@ export class BeneficiariesController {
 
   @Patch(":id")
   async update(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Param("id") id: string,
     @Body() dto: UpdateBeneficiaryDto,
   ) {
@@ -58,7 +58,7 @@ export class BeneficiariesController {
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user,
     @Param("id") id: string,
   ) {
     await this.beneficiariesService.remove(user.userId, id);

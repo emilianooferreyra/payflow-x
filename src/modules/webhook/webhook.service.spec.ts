@@ -31,14 +31,26 @@ describe("WebhookService", () => {
     service = module.get<WebhookService>(WebhookService);
   });
 
-  const event = {
-    type: "deposit.confirmed" as const,
-    data: { amount: 100, currency: "USD" },
+  const event: Parameters<typeof service.dispatch>[0] = {
+    type: "deposit.confirmed",
+    data: {
+      walletId: "w-1",
+      userId: "u-1",
+      amount: "500",
+      currency: "USD",
+      transactionId: "tx-1",
+    },
   };
 
   const payload = JSON.stringify({
     event: "deposit.confirmed",
-    data: { amount: 100, currency: "USD" },
+    data: {
+      walletId: "w-1",
+      userId: "u-1",
+      amount: "500",
+      currency: "USD",
+      transactionId: "tx-1",
+    },
     timestamp: expect.any(String),
   });
 

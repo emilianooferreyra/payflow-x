@@ -19,10 +19,12 @@ export const envSchema = z
       .string()
       .min(1, "GOOGLE_CLIENT_SECRET is required."),
     GOOGLE_CALLBACK_URL: z.string().min(1, "GOOGLE_CALLBACK_URL is required."),
+    EXCHANGE_RATE_MAX_AGE_MS: z
+      .string()
+      .default("300000")
+      .transform(Number),
   })
   .passthrough();
-
-type envType = z.infer<typeof envSchema>;
 
 const envParsed = envSchema.safeParse(process.env);
 
@@ -31,16 +33,4 @@ if (!envParsed.success) {
   throw new Error("Invalid environment variables");
 }
 
-export const envs: envType = {
-  PORT: envParsed.data.PORT,
-  ALLOWED_ORIGINS: envParsed.data.ALLOWED_ORIGINS,
-  DATABASE_URL: envParsed.data.DATABASE_URL,
-  REDIS_URL: envParsed.data.REDIS_URL,
-  RESEND_API_KEY: envParsed.data.RESEND_API_KEY,
-  RESEND_FROM_EMAIL: envParsed.data.RESEND_FROM_EMAIL,
-  JWT_ACCESS_SECRET: envParsed.data.JWT_ACCESS_SECRET,
-  JWT_REFRESH_SECRET: envParsed.data.JWT_REFRESH_SECRET,
-  GOOGLE_CLIENT_ID: envParsed.data.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: envParsed.data.GOOGLE_CLIENT_SECRET,
-  GOOGLE_CALLBACK_URL: envParsed.data.GOOGLE_CALLBACK_URL,
-};
+export const envs = envParsed.data satisfies z.infer<typeof envSchema>;

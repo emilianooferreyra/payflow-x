@@ -1,9 +1,9 @@
 import {
   Injectable,
-  NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertFound } from "../../common/utils/assert-found";
 
 @Injectable()
 export class CardService {
@@ -19,7 +19,7 @@ export class CardService {
   async freeze(id: string, userId: string) {
     const card = await this.prisma.card.findFirst({ where: { id, userId } });
 
-    if (!card) throw new NotFoundException("Card not found");
+    assertFound(card, "Card");
     if (card.isFrozen)
       throw new UnprocessableEntityException("Card is already frozen");
 
@@ -32,7 +32,7 @@ export class CardService {
   async unfreeze(id: string, userId: string) {
     const card = await this.prisma.card.findFirst({ where: { id, userId } });
 
-    if (!card) throw new NotFoundException("Card not found");
+    assertFound(card, "Card");
     if (!card.isFrozen)
       throw new UnprocessableEntityException("Card is not frozen");
 

@@ -2,10 +2,18 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHmac } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 
-interface WebhookEvent {
-  type: "deposit.confirmed" | "withdraw.completed";
-  data: Record<string, unknown>;
+interface WebhookEventData {
+  walletId: string;
+  userId: string;
+  amount: string;
+  currency: string;
+  transactionId: string;
 }
+
+type WebhookEvent =
+  | { type: "deposit.confirmed"; data: WebhookEventData }
+  | { type: "withdraw.completed"; data: WebhookEventData }
+  | { type: "transfer.completed"; data: WebhookEventData };
 
 @Injectable()
 export class WebhookService {

@@ -1,11 +1,11 @@
-import { IsNumber, IsPositive, IsString, Max } from "class-validator";
+import { IsString, Matches } from "class-validator";
+import { AMOUNT_PATTERN } from "./amount.dto";
 
 export class SendDto {
   @IsString()
   beneficiaryId!: string;
 
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @IsPositive()
-  @Max(50000)
-  amount!: number;
+  @IsString()
+  @Matches(AMOUNT_PATTERN, { message: "amount must be a positive decimal string" })
+  amount!: string;
 }
