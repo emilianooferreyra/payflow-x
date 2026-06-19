@@ -9,6 +9,7 @@ import { JwtService } from "@nestjs/jwt";
 import { randomBytes } from "crypto";
 import { generateSecret, generateURI, verify as verifyOTP } from "otplib";
 import * as QRCode from "qrcode";
+import type { Response } from "express";
 import { envs } from "../../config";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
@@ -131,7 +132,7 @@ export class TwoFactorService {
   async verifyTwoFactor(
     userId: string,
     code: string,
-    res,
+    res: Response,
     userAgent?: string,
     ip?: string,
   ) {

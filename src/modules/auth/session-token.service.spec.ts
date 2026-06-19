@@ -5,6 +5,7 @@ import { SessionService } from "../session/session.service";
 import { HashService } from "../hash/hash.service";
 import { SessionTokenService } from "./session-token.service";
 import { makeSession } from "../../common/testing";
+import type { Response } from "express";
 
 jest.mock("../../config", () => ({
   envs: {

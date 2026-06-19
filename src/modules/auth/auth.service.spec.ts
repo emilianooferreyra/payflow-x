@@ -18,6 +18,7 @@ import { EmailsService } from "../emails/emails.service";
 import { mockPrisma, makeUser } from "../../common/testing";
 import { SessionTokenService } from "./session-token.service";
 import { TwoFactorService } from "./two-factor.service";
+import type { Response } from "express";
 import { PasswordRecoveryService } from "./password-recovery.service";
 
 describe("AuthService", () => {
@@ -107,7 +108,7 @@ describe("AuthService", () => {
       const req = {
         cookies: { trusted_device: "valid-token" },
       } as any;
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
 
       const result = await service.login(
         { email: "test@example.com", password: "pass" },
@@ -128,7 +129,7 @@ describe("AuthService", () => {
       mockJwtService.sign.mockReturnValue("pending-token");
 
       const req = { cookies: {} } as any;
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
 
       const result = await service.login(
         { email: "test@example.com", password: "pass" },
@@ -147,7 +148,7 @@ describe("AuthService", () => {
       );
       mockHashService.verify.mockResolvedValue(false);
 
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
 
       await expect(
         service.login(
@@ -167,7 +168,7 @@ describe("AuthService", () => {
         id: "session-1",
       });
 
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
       const result = await service.register(
         {
           email: "test@test.com",
@@ -190,7 +191,7 @@ describe("AuthService", () => {
     it("should delete session and clear cookies", async () => {
       mockSessionService.delete.mockResolvedValue({ id: "session-1" });
 
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
       const result = await service.logout("user-1", "session-1", res);
 
       expect(result.message).toBe("Logged out successfully");

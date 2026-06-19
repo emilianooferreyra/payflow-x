@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import type { Request } from "express";
 import { envs } from "../../../config";
 
 @Injectable()
@@ -16,7 +17,7 @@ export class RefreshStrategy extends PassportStrategy(Strategy, "jwt-refresh") {
     });
   }
 
-  async validate(req, payload: { sub: string; sessionId: string }) {
+  async validate(req: Request, payload: { sub: string; sessionId: string }) {
     const refreshToken = req.cookies?.refresh_token;
 
     if (!refreshToken) {

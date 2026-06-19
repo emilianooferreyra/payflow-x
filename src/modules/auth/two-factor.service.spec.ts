@@ -13,6 +13,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 import { HashService } from "../hash/hash.service";
 import { SessionTokenService } from "./session-token.service";
+import type { Response } from "express";
 import { mockPrisma, makeUser } from "../../common/testing";
 
 const mockOtpVerify = jest.fn(() => ({ valid: true }));
@@ -104,7 +105,7 @@ describe("TwoFactorService", () => {
         id: "session-1",
       });
 
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
       const result = await service.verifyTwoFactor("user-1", "ABCD1234", res);
 
       expect((result as { user: { email: string } }).user.email).toBe(
@@ -125,7 +126,7 @@ describe("TwoFactorService", () => {
       );
       mockPrisma.userBackupCode.findMany.mockResolvedValue([]);
 
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
       await expect(
         service.verifyTwoFactor("user-1", "ABCD1234", res),
       ).rejects.toThrow(UnauthorizedException);
@@ -140,7 +141,7 @@ describe("TwoFactorService", () => {
       mockOtpVerify.mockReturnValue({ valid: false });
       mockPrisma.userBackupCode.findMany.mockResolvedValue([]);
 
-      const res = { cookie: jest.fn(), clearCookie: jest.fn() };
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
       for (let i = 0; i < 5; i++) {
         await expect(
           service.verifyTwoFactor("user-1", "000000", res),

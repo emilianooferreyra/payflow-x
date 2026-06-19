@@ -3,6 +3,13 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CurrencyEnum } from "../../generated/prisma/enums";
 import { assertFound } from "../../common/utils/assert-found";
 
+interface ExchangeRateApiResponse {
+  result: string;
+  time_last_update_unix: number;
+  base_code: string;
+  conversion_rates: Record<string, number>;
+}
+
 const SUPPORTED_PAIRS: [CurrencyEnum, CurrencyEnum][] = [
   ["USD", "ARS"],
   ["ARS", "USD"],
@@ -75,7 +82,7 @@ export class ExchangeRateService {
     const res = await fetch(
       `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`,
     );
-    const data = await res.json();
+    const data: ExchangeRateApiResponse = await res.json();
 
     const now = new Date();
     const pairs = [

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import type { KycReviewAction } from "./kyc.types";
 import { PrismaService } from "../prisma/prisma.service";
 
 const SUBMITTABLE_STATES = ["PENDING", "REJECTED"];
@@ -62,7 +63,7 @@ export class KycService {
     this.logger.log(`KYC auto-approved for user ${userId}`);
   }
 
-  async review(userId: string, action: "approve" | "reject") {
+  async review(userId: string, action: KycReviewAction) {
     const kyc = await this.getStatus(userId);
 
     if (kyc.status !== "IN_REVIEW") {

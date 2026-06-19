@@ -16,7 +16,8 @@ import { TwoFactorService, TRUSTED_DEVICE_COOKIE } from "./two-factor.service";
 import { PasswordRecoveryService } from "./password-recovery.service";
 import type { RegisterDto } from "./dto/register.dto";
 import type { LoginDto } from "./dto/login.dto";
-import type { Request } from "express";
+import type { Request, Response } from "express";
+import type { GoogleUser } from "./strategies/google.strategy";
 
 @Injectable()
 export class AuthService {
@@ -32,7 +33,7 @@ export class AuthService {
     private readonly passwordRecoveryService: PasswordRecoveryService,
   ) {}
 
-  async register(dto: RegisterDto, res, userAgent?: string, ip?: string) {
+  async register(dto: RegisterDto, res: Response, userAgent?: string, ip?: string) {
     const user = await this.usersService.create(dto);
     await this.sessionTokenService.createSessionWithTokens(
       user.id,
@@ -45,7 +46,7 @@ export class AuthService {
 
   async login(
     dto: LoginDto,
-    res,
+    res: Response,
     req?: Request,
     userAgent?: string,
     ip?: string,
@@ -97,7 +98,7 @@ export class AuthService {
     return { user: { id: user.id, email: user.email, name: user.name } };
   }
 
-  async refresh(userId: string, sessionId: string, refreshToken: string, res) {
+  async refresh(userId: string, sessionId: string, refreshToken: string, res: Response) {
     try {
       const session = await this.sessionService.findOne({
         id: sessionId,
@@ -137,7 +138,7 @@ export class AuthService {
     }
   }
 
-  async googleLogin(googleUser: any, res, userAgent?: string, ip?: string) {
+  async googleLogin(googleUser: GoogleUser, res: Response, userAgent?: string, ip?: string) {
     try {
       const existing = await this.usersService
         .findOne({ email: googleUser.email })
@@ -173,7 +174,7 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string, sessionId: string, res) {
+  async logout(userId: string, sessionId: string, res: Response) {
     try {
       await this.sessionService.delete({ id: sessionId, userId });
       this.sessionTokenService.clearTokenCookies(res);

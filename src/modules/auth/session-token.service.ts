@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import type { Response } from "express";
 import { envs } from "../../config";
 import { HashService } from "../hash/hash.service";
 import { SessionService } from "../session/session.service";
@@ -27,7 +28,7 @@ export class SessionTokenService {
     return { accessToken, refreshToken };
   }
 
-  setTokenCookies(res, accessToken: string, refreshToken: string) {
+  setTokenCookies(res: Response, accessToken: string, refreshToken: string) {
     const isProd = process.env.NODE_ENV === "production";
 
     res.cookie("access_token", accessToken, {
@@ -45,14 +46,14 @@ export class SessionTokenService {
     });
   }
 
-  clearTokenCookies(res) {
+  clearTokenCookies(res: Response) {
     res.clearCookie("access_token");
     res.clearCookie("refresh_token");
   }
 
   async createSessionWithTokens(
     userId: string,
-    res,
+    res: Response,
     userAgent?: string,
     ip?: string,
   ) {

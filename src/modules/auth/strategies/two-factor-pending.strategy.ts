@@ -18,10 +18,7 @@ export class TwoFactorPendingStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: { sub: string; type: string }) {
-    if (payload.type !== "2fa_pending") {
-      throw new UnauthorizedException("Invalid token type");
-    }
+  async validate(payload: { sub: string; type: "2fa_pending" }) {
     return { userId: payload.sub };
   }
 }
