@@ -187,6 +187,73 @@ describe("AuthService", () => {
     });
   });
 
+  describe("appleLogin", () => {
+    it("should create user and session for first-time Apple login", async () => {
+      mockUserService.findOne.mockResolvedValue(null);
+      mockUserService.create.mockResolvedValue(
+        makeUser({ id: "apple-user-1", email: "apple@test.com", name: "John", lastName: "Doe" }),
+      );
+      mockSessionTokenService.createSessionWithTokens.mockResolvedValue({
+        id: "session-1",
+      });
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+      const result = await service.appleLogin(
+        { appleId: "apple-sub", email: "apple@test.com", name: "John", lastName: "Doe" },
+        res,
+      );
+
+      expect(result.user.email).toBe("apple@test.com");
+      expect(result.user.name).toBe("John");
+      expect(mockUserService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: "apple@test.com",
+          authProvider: "APPLE",
+          emailConfirm: true,
+        }),
+      );
+      expect(mockSessionTokenService.createSessionWithTokens).toHaveBeenCalledWith(
+        "apple-user-1",
+        res,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should login existing user without creating a new one", async () => {
+      mockUserService.findOne.mockResolvedValue(
+        makeUser({ id: "existing-apple-user", email: "apple@test.com", name: "John" }),
+      );
+      mockSessionTokenService.createSessionWithTokens.mockResolvedValue({
+        id: "session-1",
+      });
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+      const result = await service.appleLogin(
+        { appleId: "apple-sub", email: "apple@test.com" },
+        res,
+      );
+
+      expect(result.user.email).toBe("apple@test.com");
+      expect(result.user.id).toBe("existing-apple-user");
+      expect(mockUserService.create).not.toHaveBeenCalled();
+      expect(mockSessionTokenService.createSessionWithTokens).toHaveBeenCalledWith(
+        "existing-apple-user",
+        res,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should throw BadRequestException on failure", async () => {
+      mockUserService.findOne.mockRejectedValue(new Error("Critical DB Connection failure"));
+
+      await expect(
+        service.appleLogin({ appleId: "apple-sub", email: "apple@test.com" }, {} as Response),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
   describe("logout", () => {
     it("should delete session and clear cookies", async () => {
       mockSessionService.delete.mockResolvedValue({ id: "session-1" });

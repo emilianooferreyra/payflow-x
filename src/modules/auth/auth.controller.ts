@@ -26,12 +26,19 @@ import { RecaptchaGuard } from "./guards/recaptcha.guard";
 import { TwoFactorPendingGuard } from "./guards/two-factor-pending.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import type { AppleUser } from "./strategies/apple.strategy";
+import type { GoogleUser } from "./strategies/google.strategy";
 
 @ApiTags("Auth")
 @ApiCookieAuth()
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  private extractIp(req: Request): string {
+    const forwarded = req.headers["x-forwarded-for"];
+    const forwardedStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    return forwardedStr ?? req.ip ?? req.socket?.remoteAddress ?? "";
+  }
 
   @Post("register")
   @UseGuards(RecaptchaGuard)
@@ -44,7 +51,7 @@ export class AuthController {
       dto,
       res,
       req.headers["user-agent"],
-      req.ip,
+      this.extractIp(req),
     );
   }
 
@@ -61,7 +68,7 @@ export class AuthController {
       res,
       req,
       req.headers["user-agent"],
-      req.ip,
+      this.extractIp(req),
     );
   }
 
@@ -85,7 +92,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(RefreshTokenGuard)
   async logout(
-    @CurrentUser() user,
+    @CurrentUser() user: { userId: string; sessionId: string },
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.logout(user.userId, user.sessionId, res);
@@ -112,14 +119,14 @@ export class AuthController {
   @Post("2fa/codes/regenerate")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async regenerateBackupCodes(@CurrentUser() user) {
+  async regenerateBackupCodes(@CurrentUser() user: { userId: string }) {
     return this.authService.regenerateBackupCodes(user.userId);
   }
 
   @Post("2fa/generate")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async generate2FA(@CurrentUser() user) {
+  async generate2FA(@CurrentUser() user: { userId: string }) {
     return this.authService.generateTwoFactor(user.userId);
   }
 
@@ -127,7 +134,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async enable2FA(
-    @CurrentUser() user,
+    @CurrentUser() user: { userId: string },
     @Body() dto: VerifyTwoFactorDto,
   ) {
     return this.authService.enableTwoFactor(user.userId, dto.code);
@@ -137,7 +144,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async disable2FA(
-    @CurrentUser() user,
+    @CurrentUser() user: { userId: string },
     @Body() dto: VerifyTwoFactorDto,
   ) {
     return this.authService.disableTwoFactor(user.userId, dto.code);
@@ -147,7 +154,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(TwoFactorPendingGuard)
   async verify2FA(
-    @CurrentUser() user,
+    @CurrentUser() user: { userId: string },
     @Body() dto: VerifyTwoFactorDto,
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
@@ -157,7 +164,7 @@ export class AuthController {
       dto.code,
       res,
       req.headers["user-agent"],
-      req.ip,
+      this.extractIp(req),
     );
   }
 
@@ -168,7 +175,7 @@ export class AuthController {
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
-    @CurrentUser() user,
+    @CurrentUser() user: GoogleUser,
     @Res() res: Response,
     @Req() req: Request,
   ) {
@@ -176,7 +183,7 @@ export class AuthController {
       user,
       res,
       req.headers["user-agent"],
-      req.ip,
+      this.extractIp(req),
     );
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
     return res.redirect(`${frontendUrl}/dashboard`);
@@ -187,18 +194,31 @@ export class AuthController {
   async appleAuth() {}
 
   @Get("apple/callback")
-  @Post("apple/callback")
   @UseGuards(AppleAuthGuard)
-  async appleCallback(
+  async appleCallbackGet(
     @CurrentUser() user: AppleUser,
     @Res() res: Response,
     @Req() req: Request,
   ) {
+    return this.handleAppleCallback(user, res, req);
+  }
+
+  @Post("apple/callback")
+  @UseGuards(AppleAuthGuard)
+  async appleCallbackPost(
+    @CurrentUser() user: AppleUser,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
+    return this.handleAppleCallback(user, res, req);
+  }
+
+  private async handleAppleCallback(user: AppleUser, res: Response, req: Request) {
     await this.authService.appleLogin(
       user,
       res,
       req.headers["user-agent"],
-      req.ip,
+      this.extractIp(req),
     );
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
     return res.redirect(`${frontendUrl}/dashboard`);

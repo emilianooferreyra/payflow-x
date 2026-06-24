@@ -47,6 +47,15 @@ describe("Auth (e2e)", () => {
       expect(cookies.some((c: string) => c.startsWith("refresh_token="))).toBe(true);
     });
 
+    it("should register without recaptchaToken (dev bypass)", async () => {
+      const res = await request(app.getHttpServer())
+        .post(`${BASE}/register`)
+        .send({ email: "no-recaptcha@test.com", password: "Password123!", name: "Test" })
+        .expect(201);
+
+      expect(res.headers["set-cookie"]).toBeDefined();
+    });
+
     it("should reject duplicate email", async () => {
       await request(app.getHttpServer())
         .post(`${BASE}/register`)
@@ -198,6 +207,25 @@ describe("Auth (e2e)", () => {
         ? res.headers["set-cookie"]
         : [res.headers["set-cookie"]];
       expect(cookies.some((c: string) => c.includes("access_token=;"))).toBe(true);
+    });
+  });
+
+  describe("Apple OAuth routes", () => {
+    it("GET /auth/apple should redirect to Apple OAuth", async () => {
+      await request(app.getHttpServer())
+        .get(`${BASE}/apple`)
+        .expect(302);
+    });
+
+    it("POST /auth/apple/callback should be registered (requires Apple credentials)", async () => {
+      const res = await request(app.getHttpServer())
+        .post(`${BASE}/apple/callback`)
+        .send({ code: "test-code", id_token: "test-token" });
+
+      // Without Apple Developer credentials, passport-apple attempts
+      // code exchange and crashes with InternalOAuthError → 500.
+      // The assertion confirms the route is registered (not 404).
+      expect(res.status).not.toBe(404);
     });
   });
 });

@@ -1,3 +1,4 @@
+process.env.NODE_ENV = process.env.NODE_ENV || "test";
 process.env.PORT = process.env.PORT || "3000";
 process.env.ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "http://localhost:3000";
 process.env.DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:123456@localhost:5432/authdb_test";
