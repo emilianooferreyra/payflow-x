@@ -145,6 +145,22 @@ describe("AuthService", () => {
       );
     });
 
+    it("should reject login when user has no password set (OAuth account)", async () => {
+      mockUserService.findOne.mockResolvedValue(
+        makeUser({ password: null, authProvider: "GOOGLE" }),
+      );
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+
+      await expect(
+        service.login({ email: "test@example.com", password: "pass" }, res),
+      ).rejects.toThrow(
+        new UnauthorizedException(
+          "No password set. Sign in with your OAuth provider or use 'Forgot Password' to set one.",
+        ),
+      );
+    });
+
     it("should reject invalid password", async () => {
       mockUserService.findOne.mockResolvedValue(
         makeUser({ password: "hashed" }),

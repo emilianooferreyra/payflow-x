@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { randomUUID } from "crypto";
+
 import { envs } from "../../config";
 import { UsersService } from "../users/users.service";
 import { HashService } from "../hash/hash.service";
@@ -54,7 +54,13 @@ export class AuthService {
   ) {
     const user = await this.usersService.findOne({ email: dto.email });
 
-    const isValid = await this.hashService.verify(user.password!, dto.password);
+    if (!user.password) {
+      throw new UnauthorizedException(
+        "No password set. Sign in with your OAuth provider or use 'Forgot Password' to set one.",
+      );
+    }
+
+    const isValid = await this.hashService.verify(user.password, dto.password);
     if (!isValid) throw new UnauthorizedException("Invalid credentials");
 
     if (user.twoFactorEnabled) {
@@ -182,7 +188,6 @@ export class AuthService {
       if (!existingUser) {
         const newUser = await this.usersService.create({
           email: googleUser.email,
-          password: await this.hashService.hash(randomUUID()),
           name: googleUser.name,
           lastName: googleUser.lastName,
           avatar: googleUser.avatar,
@@ -227,7 +232,6 @@ export class AuthService {
       if (!existingUser) {
         const newUser = await this.usersService.create({
           email: appleUser.email,
-          password: await this.hashService.hash(randomUUID()),
           name: appleUser.name,
           lastName: appleUser.lastName,
           authProvider: AuthProviderEnum.APPLE,

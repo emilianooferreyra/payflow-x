@@ -70,7 +70,10 @@ export class UsersService {
     authProvider,
   }: CreateUserInterface) {
     await this.validateEmail(email);
-    const hashedPassword = await this.hash.hash(password);
+    let hashedPassword: string | undefined;
+    if (password) {
+      hashedPassword = await this.hash.hash(password);
+    }
 
     return await this.prisma.user.create({
       data: {

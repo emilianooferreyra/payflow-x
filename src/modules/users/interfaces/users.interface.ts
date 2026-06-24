@@ -10,7 +10,7 @@ export interface CreateUserInterface {
   email: string;
   backupEmail?: string;
   phone?: string;
-  password: string;
+  password?: string;
   country?: string;
   language?: string;
 
