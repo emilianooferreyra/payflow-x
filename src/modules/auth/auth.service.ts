@@ -18,6 +18,7 @@ import type { RegisterDto } from "./dto/register.dto";
 import type { LoginDto } from "./dto/login.dto";
 import type { Request, Response } from "express";
 import type { GoogleUser } from "./strategies/google.strategy";
+import type { AppleUser } from "./strategies/apple.strategy";
 
 @Injectable()
 export class AuthService {
@@ -140,12 +141,14 @@ export class AuthService {
 
   async googleLogin(googleUser: GoogleUser, res: Response, userAgent?: string, ip?: string) {
     try {
-      const existing = await this.usersService
+      const existingUser = await this.usersService
         .findOne({ email: googleUser.email })
         .catch(() => null);
 
-      if (!existing) {
-        await this.usersService.create({
+      let userId: string;
+
+      if (!existingUser) {
+        const newUser = await this.usersService.create({
           email: googleUser.email,
           password: await this.hashService.hash(randomUUID()),
           name: googleUser.name,
@@ -154,23 +157,74 @@ export class AuthService {
           authProvider: AuthProviderEnum.GOOGLE,
           emailConfirm: true,
         });
+        userId = newUser.id;
+      } else {
+        userId = existingUser.id;
       }
 
-      const user = await this.usersService.findOne({
-        email: googleUser.email,
-      });
-
       await this.sessionTokenService.createSessionWithTokens(
-        user.id,
+        userId,
         res,
         userAgent,
         ip,
       );
 
-      return { user: { id: user.id, email: user.email, name: user.name } };
+      const finalName = existingUser ? existingUser.name : googleUser.name;
+
+      return {
+        user: {
+          id: userId,
+          email: googleUser.email,
+          name: finalName,
+        },
+      };
     } catch (error) {
       this.logger.warn(`Google login failed: ${(error as Error).message}`);
       throw new BadRequestException("There was an error with Google login.");
+    }
+  }
+
+  async appleLogin(appleUser: AppleUser, res: Response, userAgent?: string, ip?: string) {
+    try {
+      const existingUser = await this.usersService
+        .findOne({ email: appleUser.email })
+        .catch(() => null);
+
+      let userId: string;
+
+      if (!existingUser) {
+        const newUser = await this.usersService.create({
+          email: appleUser.email,
+          password: await this.hashService.hash(randomUUID()),
+          name: appleUser.name,
+          lastName: appleUser.lastName,
+          authProvider: AuthProviderEnum.APPLE,
+          emailConfirm: true,
+        });
+        userId = newUser.id;
+      } else {
+        userId = existingUser.id;
+      }
+
+      await this.sessionTokenService.createSessionWithTokens(
+        userId,
+        res,
+        userAgent,
+        ip,
+      );
+
+      const finalName = existingUser ? existingUser.name : appleUser.name;
+
+      return {
+        user: {
+          id: userId,
+          email: appleUser.email,
+          name: finalName,
+        },
+      };
+    } catch (error) {
+      this.logger.warn(`Apple login failed: ${(error as Error).message}`);
+      throw new BadRequestException("There was an error with Apple login.");
     }
   }
 

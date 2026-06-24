@@ -1,4 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { SessionService } from "./session.service";
 import { mockPrisma, createTestingModule } from "../../common/testing";
 import { makeSession } from "../../common/testing";
@@ -7,7 +8,10 @@ describe("SessionService", () => {
   let service: SessionService;
 
   beforeEach(async () => {
-    const module = await createTestingModule([SessionService]);
+    const module = await createTestingModule([
+      SessionService,
+      { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+    ]);
     service = module.get<SessionService>(SessionService);
     jest.resetAllMocks();
   });

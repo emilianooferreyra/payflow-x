@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertFound } from "../../common/utils/assert-found";
 import {
@@ -9,7 +10,10 @@ import {
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create({
     id,
@@ -21,7 +25,7 @@ export class SessionService {
     isActive,
     expiresAt,
   }: CreateSessionInterface) {
-    return this.prisma.session.create({
+    const session = await this.prisma.session.create({
       data: {
         id,
         userId,
@@ -33,6 +37,13 @@ export class SessionService {
         expiresAt,
       },
     });
+
+    this.eventEmitter.emit("session.created", {
+      sessionId: session.id,
+      ip: ipAddress,
+    });
+
+    return session;
   }
 
   async getAll({ userId }: GetAllSessions) {

@@ -29,4 +29,9 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   country?: string;
+
+  /** ReCAPTCHA v3 token from frontend */
+  @IsString()
+  @IsOptional()
+  recaptchaToken?: string;
 }

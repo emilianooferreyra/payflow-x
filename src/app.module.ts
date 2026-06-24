@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CacheModule } from "@nestjs/cache-manager";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
 import { LoggerModule } from "nestjs-pino";
@@ -26,6 +27,7 @@ import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.s
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     CacheModule.registerAsync({
       isGlobal: true,

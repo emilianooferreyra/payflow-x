@@ -20,9 +20,12 @@ import { VerifyOtpDto } from "./dto/verify-otp.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
+import { AppleAuthGuard } from "./guards/apple-auth.guard";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
+import { RecaptchaGuard } from "./guards/recaptcha.guard";
 import { TwoFactorPendingGuard } from "./guards/two-factor-pending.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
+import type { AppleUser } from "./strategies/apple.strategy";
 
 @ApiTags("Auth")
 @ApiCookieAuth()
@@ -31,6 +34,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("register")
+  @UseGuards(RecaptchaGuard)
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -46,6 +50,7 @@ export class AuthController {
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RecaptchaGuard)
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -168,6 +173,28 @@ export class AuthController {
     @Req() req: Request,
   ) {
     await this.authService.googleLogin(
+      user,
+      res,
+      req.headers["user-agent"],
+      req.ip,
+    );
+    const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
+    return res.redirect(`${frontendUrl}/dashboard`);
+  }
+
+  @Get("apple")
+  @UseGuards(AppleAuthGuard)
+  async appleAuth() {}
+
+  @Get("apple/callback")
+  @Post("apple/callback")
+  @UseGuards(AppleAuthGuard)
+  async appleCallback(
+    @CurrentUser() user: AppleUser,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
+    await this.authService.appleLogin(
       user,
       res,
       req.headers["user-agent"],

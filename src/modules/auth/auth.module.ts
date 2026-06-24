@@ -9,7 +9,10 @@ import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { RefreshStrategy } from "./strategies/refresh.strategy";
 import { GoogleStrategy } from "./strategies/google.strategy";
+import { AppleStrategy } from "./strategies/apple.strategy";
 import { TwoFactorPendingStrategy } from "./strategies/two-factor-pending.strategy";
+import { GeolocationService } from "./geolocation/geolocation.service";
+import { GeolocationListener } from "./geolocation/geolocation.listener";
 import { PrismaModule } from "../prisma/prisma.module";
 import { UsersModule } from "../users/users.module";
 import { HashModule } from "../hash/hash.module";
@@ -41,7 +44,10 @@ import { envs } from "../../config";
     JwtStrategy,
     RefreshStrategy,
     GoogleStrategy,
+    AppleStrategy,
     TwoFactorPendingStrategy,
+    GeolocationService,
+    GeolocationListener,
   ],
 })
 export class AuthModule {}
