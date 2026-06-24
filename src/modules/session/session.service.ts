@@ -6,6 +6,7 @@ import {
   CreateSessionInterface,
   GetAllSessions,
   GetSession,
+  UpdateSessionInterface,
 } from "./interfaces/session.interfaces";
 
 @Injectable()
@@ -75,18 +76,20 @@ export class SessionService {
     id,
     userId,
     refreshToken,
+    refreshTokenVersion,
     userAgent,
     ipAddress,
     location,
     isActive,
     expiresAt,
-  }: GetSession & Partial<CreateSessionInterface>) {
+  }: GetSession & Partial<UpdateSessionInterface>) {
     await this.findOne({ id, userId });
 
     return await this.prisma.session.update({
       where: { id, userId },
       data: {
         refreshToken,
+        refreshTokenVersion,
         userAgent,
         ipAddress,
         location,

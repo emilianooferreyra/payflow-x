@@ -15,8 +15,8 @@ export class SessionTokenService {
     private readonly sessionService: SessionService,
   ) {}
 
-  async generateTokens(userId: string, sessionId: string) {
-    const payload = { sub: userId, sessionId };
+  async generateTokens(userId: string, sessionId: string, version: number) {
+    const payload = { sub: userId, sessionId, version };
 
     const accessToken = this.jwtService.sign(payload);
 
@@ -69,7 +69,7 @@ export class SessionTokenService {
         expiresAt,
       });
 
-      const tokens = await this.generateTokens(userId, session.id);
+      const tokens = await this.generateTokens(userId, session.id, 0);
       const hashedRefresh = await this.hashService.hash(tokens.refreshToken);
 
       await this.sessionService.update({

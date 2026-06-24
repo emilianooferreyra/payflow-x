@@ -77,12 +77,13 @@ export class AuthController {
   @UseGuards(RefreshTokenGuard)
   async refresh(
     @CurrentUser()
-    user: { userId: string; sessionId: string; refreshToken: string },
+    user: { userId: string; sessionId: string; version: number; refreshToken: string },
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.refresh(
       user.userId,
       user.sessionId,
+      user.version,
       user.refreshToken,
       res,
     );

@@ -63,7 +63,7 @@ describe("SessionTokenService", () => {
       mockJwtService.sign.mockReturnValue("mocked-access-token");
       mockJwtService.signAsync.mockResolvedValue("mocked-refresh-token");
 
-      const result = await service.generateTokens("user-1", "session-1");
+      const result = await service.generateTokens("user-1", "session-1", 0);
 
       expect(result).toEqual({
         accessToken: "mocked-access-token",
@@ -73,10 +73,11 @@ describe("SessionTokenService", () => {
       expect(mockJwtService.sign).toHaveBeenCalledWith({
         sub: "user-1",
         sessionId: "session-1",
+        version: 0,
       });
 
       expect(mockJwtService.signAsync).toHaveBeenCalledWith(
-        { sub: "user-1", sessionId: "session-1" },
+        { sub: "user-1", sessionId: "session-1", version: 0 },
         {
           secret: "mocked-refresh-secret",
           expiresIn: "7d",

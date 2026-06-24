@@ -16,6 +16,7 @@ export interface UpdateSessionInterface {
   userId: string;
 
   refreshToken?: string;
+  refreshTokenVersion?: number;
   userAgent?: string;
   ipAddress?: string;
   location?: string;

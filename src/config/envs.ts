@@ -30,6 +30,7 @@ export const envSchema = z
     RECAPTCHA_SITE_KEY: z.string().default(""),
     RECAPTCHA_SECRET_KEY: z.string().default(""),
     RECAPTCHA_THRESHOLD: z.string().default("0.5"),
+    REFRESH_GRACE_PERIOD_MS: z.string().default("2000").transform(Number),
   })
   .passthrough();
 

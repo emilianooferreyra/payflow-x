@@ -50,7 +50,8 @@ model Session {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  refreshToken String
+  refreshToken         String
+  refreshTokenVersion Int      @default(0)
 
   userAgent String?
   ipAddress String?

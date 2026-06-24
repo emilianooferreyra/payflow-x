@@ -64,6 +64,7 @@ export const makeSession = (
     id: string;
     userId: string;
     refreshToken: string;
+    refreshTokenVersion: number;
     userAgent: string | null;
     ipAddress: string | null;
     location: string | null;
@@ -76,6 +77,7 @@ export const makeSession = (
   id: uniqueId(),
   userId: uniqueId(),
   refreshToken: "hashed-refresh-token",
+  refreshTokenVersion: 0,
   userAgent: null,
   ipAddress: null,
   location: null,

@@ -17,13 +17,18 @@ export class RefreshStrategy extends PassportStrategy(Strategy, "jwt-refresh") {
     });
   }
 
-  async validate(req: Request, payload: { sub: string; sessionId: string }) {
+  async validate(req: Request, payload: { sub: string; sessionId: string; version?: number }) {
     const refreshToken = req.cookies?.refresh_token;
 
     if (!refreshToken) {
       throw new UnauthorizedException("Refresh token not found");
     }
 
-    return { userId: payload.sub, sessionId: payload.sessionId, refreshToken };
+    return {
+      userId: payload.sub,
+      sessionId: payload.sessionId,
+      version: payload.version ?? 0,
+      refreshToken,
+    };
   }
 }

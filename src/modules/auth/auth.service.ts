@@ -99,22 +99,53 @@ export class AuthService {
     return { user: { id: user.id, email: user.email, name: user.name } };
   }
 
-  async refresh(userId: string, sessionId: string, refreshToken: string, res: Response) {
+  async refresh(userId: string, sessionId: string, version: number, refreshToken: string, res: Response) {
     try {
-      const session = await this.sessionService.findOne({
-        id: sessionId,
-        userId,
-      });
+      const session = await this.sessionService
+        .findOne({ id: sessionId, userId })
+        .catch(() => null);
 
-      const isValid = await this.hashService.verify(
+      if (!session || !session.isActive) {
+        throw new UnauthorizedException("Session invalid or inactive");
+      }
+
+      const isHashValid = await this.hashService.verify(
         session.refreshToken,
         refreshToken,
       );
-      if (!isValid) throw new UnauthorizedException("Invalid refresh token");
 
+      if (!isHashValid) {
+        await this.sessionService.delete({ id: sessionId, userId }).catch(() => null);
+        this.sessionTokenService.clearTokenCookies(res);
+        this.logger.warn(
+          `Invalid refresh token hash — session ${sessionId} terminated for user ${userId}`,
+        );
+        throw new UnauthorizedException("Invalid refresh token credentials. Session revoked.");
+      }
+
+      if (session.refreshTokenVersion !== version) {
+        const withinGrace = Date.now() - session.lastUsedAt.getTime() <= envs.REFRESH_GRACE_PERIOD_MS;
+
+        if (withinGrace) {
+          this.logger.warn(
+            `Version mismatch within grace period (likely network retry) for session ${sessionId}`,
+          );
+          throw new UnauthorizedException("Concurrent request in progress. Retry syncing.");
+        }
+
+        this.logger.error(
+          `CRITICAL: Token reuse outside grace period for session ${sessionId} — user ${userId}`,
+        );
+        await this.sessionService.delete({ id: sessionId, userId }).catch(() => null);
+        this.sessionTokenService.clearTokenCookies(res);
+        throw new UnauthorizedException("Security breach suspected. Session revoked.");
+      }
+
+      const nextVersion = version + 1;
       const tokens = await this.sessionTokenService.generateTokens(
         userId,
         sessionId,
+        nextVersion,
       );
       const hashedRefresh = await this.hashService.hash(tokens.refreshToken);
 
@@ -122,6 +153,7 @@ export class AuthService {
         id: sessionId,
         userId,
         refreshToken: hashedRefresh,
+        refreshTokenVersion: nextVersion,
       });
       this.sessionTokenService.setTokenCookies(
         res,

@@ -2,6 +2,7 @@ jest.mock("../../config", () => ({
   envs: {
     JWT_REFRESH_SECRET: "mocked-refresh-secret",
     JWT_ACCESS_SECRET: "mocked-access-secret",
+    REFRESH_GRACE_PERIOD_MS: 2000,
   },
 }));
 
@@ -15,7 +16,7 @@ import { HashService } from "../hash/hash.service";
 import { SessionService } from "../session/session.service";
 import { TokensService } from "../tokens/tokens.service";
 import { EmailsService } from "../emails/emails.service";
-import { mockPrisma, makeUser } from "../../common/testing";
+import { mockPrisma, makeUser, makeSession } from "../../common/testing";
 import { SessionTokenService } from "./session-token.service";
 import { TwoFactorService } from "./two-factor.service";
 import type { Response } from "express";
@@ -92,6 +93,8 @@ describe("AuthService", () => {
     service = module.get<AuthService>(AuthService);
     jest.resetAllMocks();
     mockJwtService.signAsync.mockResolvedValue("mocked-refresh-token");
+    mockSessionService.findOne.mockResolvedValue(undefined);
+    mockSessionService.delete.mockResolvedValue(undefined);
   });
 
   describe("login with trusted device", () => {
@@ -251,6 +254,111 @@ describe("AuthService", () => {
       await expect(
         service.appleLogin({ appleId: "apple-sub", email: "apple@test.com" }, {} as Response),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("refresh", () => {
+    it("should issue new tokens when version matches", async () => {
+      const session = makeSession({
+        id: "session-1",
+        userId: "user-1",
+        refreshTokenVersion: 0,
+      });
+      mockSessionService.findOne.mockResolvedValue(session);
+      mockHashService.verify.mockResolvedValue(true);
+      mockSessionTokenService.generateTokens.mockResolvedValue({
+        accessToken: "new-access",
+        refreshToken: "new-refresh",
+      });
+      mockHashService.hash.mockResolvedValue("new-hashed-refresh");
+      mockSessionService.update.mockResolvedValue({ ...session, refreshTokenVersion: 1 });
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+
+      const result = await service.refresh(
+        "user-1",
+        "session-1",
+        0,
+        "valid-refresh-token",
+        res,
+      );
+
+      expect(result.message).toBe("Tokens refreshed");
+      expect(mockSessionTokenService.generateTokens).toHaveBeenCalledWith(
+        "user-1",
+        "session-1",
+        1,
+      );
+      expect(mockSessionService.update).toHaveBeenCalledWith(
+        expect.objectContaining({ refreshTokenVersion: 1 }),
+      );
+      expect(mockSessionTokenService.setTokenCookies).toHaveBeenCalled();
+      expect(mockSessionService.delete).not.toHaveBeenCalled();
+    });
+
+    it("should delete session when hash is invalid", async () => {
+      const session = makeSession({
+        id: "session-1",
+        userId: "user-1",
+        refreshTokenVersion: 0,
+      });
+      mockSessionService.findOne.mockResolvedValue(session);
+      mockHashService.verify.mockResolvedValue(false);
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+
+      await expect(
+        service.refresh("user-1", "session-1", 0, "stolen-token", res),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockSessionService.delete).toHaveBeenCalledWith({
+        id: "session-1",
+        userId: "user-1",
+      });
+      expect(mockSessionTokenService.clearTokenCookies).toHaveBeenCalledWith(res);
+    });
+
+    it("should NOT delete session when version mismatch is within grace period", async () => {
+      const session = makeSession({
+        id: "session-1",
+        userId: "user-1",
+        refreshTokenVersion: 1,
+        lastUsedAt: new Date(),
+      });
+      mockSessionService.findOne.mockResolvedValue(session);
+      mockHashService.verify.mockResolvedValue(true);
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+
+      await expect(
+        service.refresh("user-1", "session-1", 0, "concurrent-token", res),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockSessionService.delete).not.toHaveBeenCalled();
+      expect(mockSessionTokenService.clearTokenCookies).not.toHaveBeenCalled();
+    });
+
+    it("should delete session when version mismatch is outside grace period", async () => {
+      const session = makeSession({
+        id: "session-1",
+        userId: "user-1",
+        refreshTokenVersion: 1,
+        lastUsedAt: new Date(Date.now() - 5000),
+      });
+      mockSessionService.findOne.mockResolvedValue(session);
+      mockHashService.verify.mockResolvedValue(true);
+
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+
+      await expect(
+        service.refresh("user-1", "session-1", 0, "attacker-token", res),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockSessionService.delete).toHaveBeenCalledWith({
+        id: "session-1",
+        userId: "user-1",
+      });
+      expect(mockSessionTokenService.clearTokenCookies).toHaveBeenCalledWith(res);
     });
   });
 
