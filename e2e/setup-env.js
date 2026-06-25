@@ -10,3 +10,5 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "test-refresh
 process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "test-client-id";
 process.env.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "test-client-secret";
 process.env.GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/api/v1/auth/google/callback";
+process.env.CSRF_SECRET = process.env.CSRF_SECRET || "test-csrf-secret";
+process.env.CSRF_ENABLED = process.env.CSRF_ENABLED || "false";

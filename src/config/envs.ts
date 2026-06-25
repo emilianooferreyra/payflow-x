@@ -31,6 +31,8 @@ export const envSchema = z
     RECAPTCHA_SECRET_KEY: z.string().default(""),
     RECAPTCHA_THRESHOLD: z.string().default("0.5"),
     REFRESH_GRACE_PERIOD_MS: z.string().default("2000").transform(Number),
+    CSRF_SECRET: z.string().default("csrf-secret-dev"),
+    CSRF_ENABLED: z.string().default("true").transform((val) => val === "true"),
   })
   .passthrough();
 

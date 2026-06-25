@@ -25,6 +25,8 @@ import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { RecaptchaGuard } from "./guards/recaptcha.guard";
 import { TwoFactorPendingGuard } from "./guards/two-factor-pending.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
+import { SkipCsrf } from "../../common/decorators/skip-csrf.decorator";
+import { generateCsrfToken } from "../../common/guards/csrf.guard";
 import type { AppleUser } from "./strategies/apple.strategy";
 import type { GoogleUser } from "./strategies/google.strategy";
 
@@ -70,6 +72,13 @@ export class AuthController {
       req.headers["user-agent"],
       this.extractIp(req),
     );
+  }
+
+  @Get("csrf-token")
+  @SkipCsrf()
+  async csrfToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const token = generateCsrfToken(req, res);
+    return { token };
   }
 
   @Post("refresh")

@@ -24,6 +24,7 @@ import { WebhookModule } from "./modules/webhook/webhook.module";
 import { BeneficiariesModule } from "./modules/beneficiaries/beneficiaries.module";
 import { HealthModule } from "./modules/health/health.module";
 import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.service";
+import { CsrfGuard } from "./common/guards/csrf.guard";
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.s
   controllers: [],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     IdempotencyCleanupService,
   ],
 })

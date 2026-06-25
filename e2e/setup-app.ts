@@ -25,7 +25,15 @@ export async function setupE2eApp(): Promise<{
     defaultVersion: "1",
   });
   app.enableCors({ origin: "*", credentials: true });
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+        },
+      },
+    }),
+  );
   app.use(cookieParser());
 
   app.useGlobalPipes(
