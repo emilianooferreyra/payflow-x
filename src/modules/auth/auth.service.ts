@@ -109,7 +109,10 @@ export class AuthService {
     try {
       const session = await this.sessionService
         .findOne({ id: sessionId, userId })
-        .catch(() => null);
+        .catch((err) => {
+          this.logger.error(`Session lookup failed for ${sessionId}: ${(err as Error).message}`);
+          return null;
+        });
 
       if (!session || !session.isActive) {
         throw new UnauthorizedException("Session invalid or inactive");
@@ -178,63 +181,46 @@ export class AuthService {
   }
 
   async googleLogin(googleUser: GoogleUser, res: Response, userAgent?: string, ip?: string) {
-    try {
-      const existingUser = await this.usersService
-        .findOne({ email: googleUser.email })
-        .catch(() => null);
-
-      let userId: string;
-
-      if (!existingUser) {
-        const newUser = await this.usersService.create({
-          email: googleUser.email,
-          name: googleUser.name,
-          lastName: googleUser.lastName,
-          avatar: googleUser.avatar,
-          authProvider: AuthProviderEnum.GOOGLE,
-          emailConfirm: true,
-        });
-        userId = newUser.id;
-      } else {
-        userId = existingUser.id;
-      }
-
-      await this.sessionTokenService.createSessionWithTokens(
-        userId,
-        res,
-        userAgent,
-        ip,
-      );
-
-      const finalName = existingUser ? existingUser.name : googleUser.name;
-
-      return {
-        user: {
-          id: userId,
-          email: googleUser.email,
-          name: finalName,
-        },
-      };
-    } catch (error) {
-      this.logger.warn(`Google login failed: ${(error as Error).message}`);
-      throw new BadRequestException("There was an error with Google login.");
-    }
+    return this.oauthLogin(
+      { email: googleUser.email, name: googleUser.name, lastName: googleUser.lastName, avatar: googleUser.avatar },
+      AuthProviderEnum.GOOGLE,
+      res,
+      userAgent,
+      ip,
+    );
   }
 
   async appleLogin(appleUser: AppleUser, res: Response, userAgent?: string, ip?: string) {
+    return this.oauthLogin(
+      { email: appleUser.email, name: appleUser.name, lastName: appleUser.lastName },
+      AuthProviderEnum.APPLE,
+      res,
+      userAgent,
+      ip,
+    );
+  }
+
+  private async oauthLogin(
+    oauthUser: { email: string; name?: string; lastName?: string; avatar?: string },
+    provider: AuthProviderEnum,
+    res: Response,
+    userAgent?: string,
+    ip?: string,
+  ) {
     try {
       const existingUser = await this.usersService
-        .findOne({ email: appleUser.email })
+        .findOne({ email: oauthUser.email })
         .catch(() => null);
 
       let userId: string;
 
       if (!existingUser) {
         const newUser = await this.usersService.create({
-          email: appleUser.email,
-          name: appleUser.name,
-          lastName: appleUser.lastName,
-          authProvider: AuthProviderEnum.APPLE,
+          email: oauthUser.email,
+          name: oauthUser.name,
+          lastName: oauthUser.lastName,
+          avatar: oauthUser.avatar,
+          authProvider: provider,
           emailConfirm: true,
         });
         userId = newUser.id;
@@ -242,25 +228,19 @@ export class AuthService {
         userId = existingUser.id;
       }
 
-      await this.sessionTokenService.createSessionWithTokens(
-        userId,
-        res,
-        userAgent,
-        ip,
-      );
-
-      const finalName = existingUser ? existingUser.name : appleUser.name;
+      await this.sessionTokenService.createSessionWithTokens(userId, res, userAgent, ip);
 
       return {
         user: {
           id: userId,
-          email: appleUser.email,
-          name: finalName,
+          email: oauthUser.email,
+          name: existingUser ? existingUser.name : oauthUser.name,
         },
       };
     } catch (error) {
-      this.logger.warn(`Apple login failed: ${(error as Error).message}`);
-      throw new BadRequestException("There was an error with Apple login.");
+      const providerName = provider.toLowerCase();
+      this.logger.warn(`${providerName} login failed: ${(error as Error).message}`);
+      throw new BadRequestException(`There was an error with ${providerName} login.`);
     }
   }
 

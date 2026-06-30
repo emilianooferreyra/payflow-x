@@ -1,5 +1,6 @@
 import { Cache, CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { isPrivateIp } from "../../../common/utils/ip.util";
 
 @Injectable()
 export class GeolocationService {
@@ -9,7 +10,7 @@ export class GeolocationService {
   constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
 
   async resolve(ip: string): Promise<string | null> {
-    if (this.isPrivateIp(ip)) {
+    if (isPrivateIp(ip)) {
       this.logger.debug(`Private IP detected: ${ip}`);
       return "Local network";
     }
@@ -58,15 +59,4 @@ export class GeolocationService {
     }
   }
 
-  private isPrivateIp(ip: string): boolean {
-    return (
-      ip === "127.0.0.1" ||
-      ip === "::1" ||
-      ip === "::ffff:127.0.0.1" ||
-      ip === "localhost" ||
-      ip.startsWith("192.168.") ||
-      ip.startsWith("10.") ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
-    );
-  }
 }

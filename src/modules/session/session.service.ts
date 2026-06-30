@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertFound } from "../../common/utils/assert-found";
@@ -11,6 +11,8 @@ import {
 
 @Injectable()
 export class SessionService {
+  private readonly logger = new Logger(SessionService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
@@ -39,10 +41,9 @@ export class SessionService {
       },
     });
 
-    this.eventEmitter.emit("session.created", {
-      sessionId: session.id,
-      ip: ipAddress,
-    });
+    this.eventEmitter
+      .emitAsync("session.created", { sessionId: session.id, ip: ipAddress })
+      .catch((err) => this.logger.error(`session.created listener failed: ${(err as Error).message}`));
 
     return session;
   }

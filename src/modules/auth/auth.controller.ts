@@ -27,6 +27,7 @@ import { TwoFactorPendingGuard } from "./guards/two-factor-pending.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { SkipCsrf } from "../../common/decorators/skip-csrf.decorator";
 import { generateCsrfToken } from "../../common/guards/csrf.guard";
+import { extractIp } from "../../common/utils/ip.util";
 import type { AppleUser } from "./strategies/apple.strategy";
 import type { GoogleUser } from "./strategies/google.strategy";
 
@@ -35,12 +36,6 @@ import type { GoogleUser } from "./strategies/google.strategy";
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  private extractIp(req: Request): string {
-    const forwarded = req.headers["x-forwarded-for"];
-    const forwardedStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    return forwardedStr ?? req.ip ?? req.socket?.remoteAddress ?? "";
-  }
 
   @Post("register")
   @UseGuards(RecaptchaGuard)
@@ -53,7 +48,7 @@ export class AuthController {
       dto,
       res,
       req.headers["user-agent"],
-      this.extractIp(req),
+      extractIp(req),
     );
   }
 
@@ -70,7 +65,7 @@ export class AuthController {
       res,
       req,
       req.headers["user-agent"],
-      this.extractIp(req),
+      extractIp(req),
     );
   }
 
@@ -174,7 +169,7 @@ export class AuthController {
       dto.code,
       res,
       req.headers["user-agent"],
-      this.extractIp(req),
+      extractIp(req),
     );
   }
 
@@ -193,7 +188,7 @@ export class AuthController {
       user,
       res,
       req.headers["user-agent"],
-      this.extractIp(req),
+      extractIp(req),
     );
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
     return res.redirect(`${frontendUrl}/dashboard`);
@@ -228,7 +223,7 @@ export class AuthController {
       user,
       res,
       req.headers["user-agent"],
-      this.extractIp(req),
+      extractIp(req),
     );
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
     return res.redirect(`${frontendUrl}/dashboard`);

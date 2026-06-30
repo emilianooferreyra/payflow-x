@@ -4,16 +4,19 @@ import { SessionService } from "./session.service";
 import { mockPrisma, createTestingModule } from "../../common/testing";
 import { makeSession } from "../../common/testing";
 
+const mockEventEmitter = { emit: jest.fn(), emitAsync: jest.fn() };
+
 describe("SessionService", () => {
   let service: SessionService;
 
   beforeEach(async () => {
     const module = await createTestingModule([
       SessionService,
-      { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      { provide: EventEmitter2, useValue: mockEventEmitter },
     ]);
     service = module.get<SessionService>(SessionService);
     jest.resetAllMocks();
+    mockEventEmitter.emitAsync.mockResolvedValue([]);
   });
 
   describe("create", () => {

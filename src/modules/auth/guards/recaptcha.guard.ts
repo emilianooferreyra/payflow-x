@@ -9,6 +9,7 @@ import {
   OnModuleInit,
 } from "@nestjs/common";
 import type { Request } from "express";
+import { extractIp, isPrivateIp } from "../../../common/utils/ip.util";
 
 @Injectable()
 export class RecaptchaGuard implements CanActivate, OnModuleInit {
@@ -30,9 +31,9 @@ export class RecaptchaGuard implements CanActivate, OnModuleInit {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const ip = (request.headers["x-forwarded-for"] as string) ?? request.ip ?? request.socket?.remoteAddress;
+    const ip = extractIp(request);
 
-    if (this.isLocalIp(ip)) {
+    if (isPrivateIp(ip)) {
       this.logger.warn(`ReCAPTCHA bypassed: local IP detected (${ip})`);
       return true;
     }
@@ -57,7 +58,7 @@ export class RecaptchaGuard implements CanActivate, OnModuleInit {
           body: new URLSearchParams({
             secret: this.recaptchaSecret,
             response: token,
-            remoteip: ip ?? "",
+            remoteip: ip,
           }),
         },
       );
@@ -89,22 +90,4 @@ export class RecaptchaGuard implements CanActivate, OnModuleInit {
     }
   }
 
-  private isLocalIp(ip?: string): boolean {
-    if (!ip) return false;
-    
-    const cleanIp = ip.replace("::ffff:", "");
-    if (["127.0.0.1", "::1", "localhost"].includes(cleanIp)) return true;
-
-    // IPv4 Privadas: 10.0.0.0/8, 192.168.0.0/16
-    if (cleanIp.startsWith("10.") || cleanIp.startsWith("192.168.")) return true;
-
-    // IPv4 Privadas: 172.16.0.0/12
-    if (cleanIp.startsWith("172.")) {
-      const parts = cleanIp.split(".");
-      const secondOctet = parseInt(parts[1], 10);
-      return secondOctet >= 16 && secondOctet <= 31;
-    }
-
-    return false;
-  }
 }

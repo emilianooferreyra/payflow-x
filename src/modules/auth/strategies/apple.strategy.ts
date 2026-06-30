@@ -5,6 +5,8 @@ import { readFileSync } from "fs";
 import { envs } from "../../../config";
 import type { Request } from "express";
 
+const bootstrapLogger = new Logger("AppleStrategy");
+
 export interface AppleUser {
   appleId: string;
   email: string;
@@ -39,7 +41,7 @@ export class AppleStrategy extends PassportStrategy(Strategy, "apple") {
           options.privateKeyString = readFileSync(keyPath, "utf-8");
         }
       } catch (error) {
-        new Logger("AppleStrategy").warn(
+        bootstrapLogger.warn(
           `Failed to read Apple private key: ${(error as Error).message}`,
         );
       }
