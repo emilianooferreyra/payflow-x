@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from "@nestjs/common";
+import { Request } from "express";
 import { Reflector } from "@nestjs/core";
 import { doubleCsrf } from "csrf-csrf";
 import { envs } from "../../config";
@@ -34,7 +35,11 @@ export class CsrfGuard implements CanActivate {
     ]);
     if (skip) return true;
 
-    const req = context.switchToHttp().getRequest();
+    const req = context.switchToHttp().getRequest<Request>();
+
+    // CSRF protege mutaciones (double-submit); los métodos seguros no
+    // cambian estado y validarlos rompe navegaciones y GETs sin header.
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return true;
 
     if (!validateRequest(req)) {
       throw new ForbiddenException("Invalid CSRF token");
