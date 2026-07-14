@@ -19,10 +19,7 @@ export const envSchema = z
       .string()
       .min(1, "GOOGLE_CLIENT_SECRET is required."),
     GOOGLE_CALLBACK_URL: z.string().min(1, "GOOGLE_CALLBACK_URL is required."),
-    EXCHANGE_RATE_MAX_AGE_MS: z
-      .string()
-      .default("300000")
-      .transform(Number),
+    EXCHANGE_RATE_MAX_AGE_MS: z.string().default("300000").transform(Number),
     APPLE_CLIENT_ID: z.string().default(""),
     APPLE_TEAM_ID: z.string().default(""),
     APPLE_KEY_ID: z.string().default(""),
@@ -32,7 +29,11 @@ export const envSchema = z
     RECAPTCHA_THRESHOLD: z.string().default("0.5"),
     REFRESH_GRACE_PERIOD_MS: z.string().default("2000").transform(Number),
     CSRF_SECRET: z.string().default("csrf-secret-dev"),
-    CSRF_ENABLED: z.string().default("true").transform((val) => val === "true"),
+    CSRF_ENABLED: z
+      .string()
+      .default("true")
+      .transform((val) => val === "true"),
+    FINNHUB_API_KEY: z.string().default(""),
   })
   .passthrough();
 

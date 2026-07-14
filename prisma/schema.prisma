@@ -34,6 +34,7 @@ model User {
   cards         Card[]
   beneficiaries Beneficiary[]
   kyc           KycVerification?
+  portfolios    Portfolio[]
 
   status       UserStatusEnum   @default(ACTIVE)
   authProvider AuthProviderEnum @default(LOCAL)
@@ -254,6 +255,14 @@ enum AssetTypeEnum {
   ETF
   COMMODITY
   CRYPTO
+  BOND
+  CEDEAR
+  FCI
+}
+
+enum VisibilityEnum {
+  PUBLIC
+  PRIVATE
 }
 
 enum CardTypeEnum {
@@ -266,6 +275,41 @@ enum KycStatusEnum {
   IN_REVIEW
   APPROVED
   REJECTED
+}
+
+model Portfolio {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  visibility  VisibilityEnum @default(PRIVATE)
+
+  assets      PortfolioAsset[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model PortfolioAsset {
+  id            String        @id @default(uuid())
+  portfolioId   String
+  portfolio     Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  symbol        String
+  type          AssetTypeEnum
+  quantity      Decimal       @db.Decimal(18, 8)
+  avgBuyPrice   Decimal       @db.Decimal(18, 2)
+  currency      String        @default("USD")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([portfolioId])
+  @@index([symbol])
 }
 
 model WebhookEndpoint {
@@ -363,4 +407,33 @@ model AuditLog {
   @@index([userId])
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+model Broker {
+  id   String @id @default(uuid())
+  slug String @unique
+  name String
+
+  feeBuyPct  Decimal  @db.Decimal(6, 3)
+  feeSellPct Decimal  @db.Decimal(6, 3)
+  feeMaxPct  Decimal? @db.Decimal(6, 3)
+  feeMinArs  Decimal? @db.Decimal(12, 2)
+  ivaOnFees  Boolean  @default(true)
+
+  subscriptionMonthlyArs Decimal? @db.Decimal(12, 2)
+  subscriptionNotes      String?
+
+  custodyPctAnnual     Decimal? @db.Decimal(6, 3)
+  custodyMinMonthlyArs Decimal? @db.Decimal(12, 2)
+  custodyNotes         String?
+
+  feeNotes       String?
+  sources        Json
+  lastVerifiedAt DateTime
+  isActive       Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
 }

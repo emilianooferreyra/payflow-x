@@ -1,0 +1,17 @@
+export const CRYPTO_SYMBOL_MAP: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  USDT: "tether",
+  USDC: "usd-coin",
+  BNB: "binancecoin",
+  ADA: "cardano",
+  XRP: "ripple",
+  DOGE: "dogecoin",
+  DOT: "polkadot",
+  MATIC: "matic-network",
+  AVAX: "avalanche-2",
+  LINK: "chainlink",
+  UNI: "uniswap",
+  LTC: "litecoin",
+};

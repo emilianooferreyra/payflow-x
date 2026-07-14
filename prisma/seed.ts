@@ -497,11 +497,113 @@ async function main() {
   })
   console.log('✅ Audit log: 7 key events\n')
 
+  await seedBrokers()
+
   console.log('🎉 Seed completed!')
   console.log('   📧 emiliano@craftbeats.dev  /  Demo1234!')
   console.log(`   💵 USD $1,842.50  |  ARS $415,000  |  USDT $1,200`)
   console.log(`   📊 Portfolio: ~$2,778 in stocks`)
   console.log(`   📈 90 days of daily yield accruals`)
+}
+
+// ── Brokers (comparador CEDEARs) ─────────────────────────────────────────────
+// Tarifario curado a mano — plan base de cada broker. Verificado por Emi el
+// 2026-07-14. Derechos de mercado BYMA (0,05%) e IVA (21%) viven en
+// src/modules/brokers/constants/market.constants.ts, NO acá.
+
+const BROKER_VERIFIED_AT = new Date('2026-07-14')
+
+const BROKERS = [
+  {
+    slug: 'iol',
+    name: 'IOL invertironline',
+    feeBuyPct: 0.6,
+    feeSellPct: 0.6,
+    ivaOnFees: true,
+    custodyNotes: 'Sin cargo (bonificada hasta cierto nivel patrimonial)',
+    feeNotes: 'Operaciones intradiarias bonificadas 100%',
+    sources: [
+      { label: 'Tarifas oficiales IOL', url: 'https://www.invertironline.com/tarifas' },
+      { label: 'Rankia (act. 30/04/2026)', url: 'https://www.rankia.com.ar/blog/analisis-merval/4309655-invertir-online-productos-comisiones-cotizaciones' },
+    ],
+  },
+  {
+    slug: 'balanz',
+    name: 'Balanz',
+    feeBuyPct: 0.5,
+    feeSellPct: 0.5,
+    ivaOnFees: true,
+    custodyNotes: 'Sin cargo de apertura ni mantenimiento',
+    feeNotes: 'Comisión máxima publicada (hasta 0,50%); intradía −50%',
+    sources: [
+      { label: 'Aranceles oficiales Balanz', url: 'https://balanz.com/comisiones/' },
+      { label: 'Rankia (12/08/2025)', url: 'https://www.rankia.com.ar/blog/trading-argentina/6944904-tarifario-comisiones-balanz-capital' },
+    ],
+  },
+  {
+    slug: 'ppi',
+    name: 'PPI — Portfolio Personal Inversiones',
+    feeBuyPct: 0.6,
+    feeSellPct: 0.6,
+    feeMaxPct: 1.5,
+    ivaOnFees: true,
+    custodyNotes: 'Sin cargo de custodia ni mantenimiento',
+    feeNotes: 'Rango 0,60%–1,50% según acuerdo; intradía bonifica la pata menor',
+    sources: [
+      { label: 'Comisiones oficiales PPI', url: 'https://portfoliopersonal.com/Contenido/comisiones' },
+      { label: 'Rankia (20/09/2025)', url: 'https://www.rankia.com.ar/blog/trading-argentina/6986316-tarifario-comisiones-ppi' },
+    ],
+  },
+  {
+    slug: 'cocos',
+    name: 'Cocos Capital',
+    feeBuyPct: 0.45,
+    feeSellPct: 0.45,
+    ivaOnFees: true,
+    custodyNotes: 'Gratis hasta USD 200.000; $1.000/mes hasta USD 300.000; proporcional CVSA por encima',
+    feeNotes: 'Plan base. Cocos Gold (hasta 0,15% AUM/mes) y Pro (desde USD 150/mes) operan al 0%. Operador humano: 1%',
+    sources: [
+      { label: 'Tarifario oficial Cocos', url: 'https://cocos.capital/tarifario' },
+      { label: 'Rankia (act. 05/2026)', url: 'https://www.rankia.com.ar/blog/trading-argentina/7336870-tarifario-comisiones-cocos-capital' },
+    ],
+  },
+  {
+    slug: 'bullmarket',
+    name: 'Bull Market Brokers',
+    feeBuyPct: 0.5,
+    feeSellPct: 0.5,
+    ivaOnFees: true,
+    custodyNotes: 'Sin mantenimiento de cuenta',
+    feeNotes: 'Cuenta Digital. Active Trader 0,25% / AT Plus 0,10% por volumen mensual; intradía −50%',
+    sources: [
+      { label: 'Guía oficial de comisiones', url: 'https://help.bullmarketbrokers.com/guia/comisiones/' },
+    ],
+  },
+  {
+    slug: 'iebmas',
+    name: 'IEB+',
+    feeBuyPct: 0,
+    feeSellPct: 0,
+    ivaOnFees: true,
+    subscriptionMonthlyArs: 5000,
+    subscriptionNotes: 'Plan Investor: $5.000 + IVA por mes, solo los meses en que operás mercado local. Plan Rookie (gratis) NO incluye acciones/CEDEARs',
+    custodyNotes: 'Custodia incluida, mantenimiento bonificado',
+    feeNotes: '0% de comisión por operación bajo modelo de suscripción',
+    sources: [
+      { label: 'Preguntas frecuentes IEB+', url: 'https://www.iebmas.com.ar/preguntas-frecuentes/' },
+    ],
+  },
+]
+
+async function seedBrokers() {
+  for (const broker of BROKERS) {
+    await prisma.broker.upsert({
+      where: { slug: broker.slug },
+      update: { ...broker, lastVerifiedAt: BROKER_VERIFIED_AT },
+      create: { ...broker, lastVerifiedAt: BROKER_VERIFIED_AT },
+    })
+  }
+  console.log(`✅ Brokers: ${BROKERS.length} tarifarios (verificados ${BROKER_VERIFIED_AT.toISOString().slice(0, 10)})\n`)
 }
 
 main()

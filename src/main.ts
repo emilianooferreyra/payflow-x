@@ -66,6 +66,9 @@ async function bootstrap() {
     .addTag("Cards", "Virtual card management")
     .addTag("Exchange Rates", "Currency exchange rates")
     .addTag("KYC", "Identity verification workflow")
+    .addTag("Prices", "Live price feeds for stocks and crypto")
+    .addTag("Portfolio", "External holdings tracker with live valuation")
+    .addTag("Brokers", "Public broker tariffs for CEDEARs cost comparison")
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

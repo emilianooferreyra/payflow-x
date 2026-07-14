@@ -23,6 +23,9 @@ import { KycModule } from "./modules/kyc/kyc.module";
 import { WebhookModule } from "./modules/webhook/webhook.module";
 import { BeneficiariesModule } from "./modules/beneficiaries/beneficiaries.module";
 import { HealthModule } from "./modules/health/health.module";
+import { PricesModule } from "./modules/prices/prices.module";
+import { PortfolioModule } from "./modules/portfolio/portfolio.module";
+import { BrokersModule } from "./modules/brokers/brokers.module";
 import { IdempotencyCleanupService } from "./common/guards/idempotency-cleanup.service";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 
@@ -64,6 +67,9 @@ import { CsrfGuard } from "./common/guards/csrf.guard";
     WebhookModule,
     BeneficiariesModule,
     HealthModule,
+    PricesModule,
+    PortfolioModule,
+    BrokersModule,
   ],
   controllers: [],
   providers: [
