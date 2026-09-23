@@ -71,7 +71,11 @@ export class AuthController {
 
   @Get("csrf-token")
   @SkipCsrf()
-  async csrfToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  csrfToken(
+    @Req() req: Request,
+    @Res({ passthrough: true })
+    res: Response,
+  ) {
     const token = generateCsrfToken(req, res);
     return { token };
   }
@@ -81,7 +85,12 @@ export class AuthController {
   @UseGuards(RefreshTokenGuard)
   async refresh(
     @CurrentUser()
-    user: { userId: string; sessionId: string; version: number; refreshToken: string },
+    user: {
+      userId: string;
+      sessionId: string;
+      version: number;
+      refreshToken: string;
+    },
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.refresh(
@@ -173,11 +182,17 @@ export class AuthController {
     );
   }
 
+  // OAuth: SkipCsrf porque son navegaciones/redirects del navegador que no
+  // pueden llevar el header x-csrf-token. La protección anti-CSRF del flujo
+  // OAuth es el parámetro `state` del protocolo (TODO pendiente: habilitar
+  // state store — la app es stateless y passport lo requiere con sesión).
   @Get("google")
+  @SkipCsrf()
   @UseGuards(GoogleAuthGuard)
   async googleAuth() {}
 
   @Get("google/callback")
+  @SkipCsrf()
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
     @CurrentUser() user: GoogleUser,
@@ -195,10 +210,12 @@ export class AuthController {
   }
 
   @Get("apple")
+  @SkipCsrf()
   @UseGuards(AppleAuthGuard)
   async appleAuth() {}
 
   @Get("apple/callback")
+  @SkipCsrf()
   @UseGuards(AppleAuthGuard)
   async appleCallbackGet(
     @CurrentUser() user: AppleUser,
@@ -209,6 +226,7 @@ export class AuthController {
   }
 
   @Post("apple/callback")
+  @SkipCsrf()
   @UseGuards(AppleAuthGuard)
   async appleCallbackPost(
     @CurrentUser() user: AppleUser,
@@ -218,7 +236,11 @@ export class AuthController {
     return this.handleAppleCallback(user, res, req);
   }
 
-  private async handleAppleCallback(user: AppleUser, res: Response, req: Request) {
+  private async handleAppleCallback(
+    user: AppleUser,
+    res: Response,
+    req: Request,
+  ) {
     await this.authService.appleLogin(
       user,
       res,

@@ -28,9 +28,9 @@ model User {
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
 
-  session     Session[]
-  wallets     Wallet[]
-  investments Investment[]
+  session       Session[]
+  wallets       Wallet[]
+  investments   Investment[]
   cards         Card[]
   beneficiaries Beneficiary[]
   kyc           KycVerification?
@@ -38,6 +38,7 @@ model User {
 
   status       UserStatusEnum   @default(ACTIVE)
   authProvider AuthProviderEnum @default(LOCAL)
+  role         RoleEnum         @default(CUSTOMER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -46,13 +47,19 @@ model User {
   @@index([createdAt])
 }
 
+enum RoleEnum {
+  CUSTOMER
+  SUPPORT
+  ADMIN
+}
+
 model Session {
   id     String @id @default(uuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  refreshToken         String
-  refreshTokenVersion Int      @default(0)
+  refreshToken        String
+  refreshTokenVersion Int    @default(0)
 
   userAgent String?
   ipAddress String?
@@ -84,28 +91,36 @@ enum AuthProviderEnum {
 }
 
 model Wallet {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String  @id @default(uuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  type     WalletTypeEnum @default(USER)
   currency CurrencyEnum
-  balance  Decimal      @default(0) @db.Decimal(20, 8)
-  version  Int          @default(1)
+  balance  Decimal        @default(0) @db.Decimal(20, 8)
+  version  Int            @default(1)
 
   transactions         Transaction[] @relation("WalletTransactions")
   incomingTransactions Transaction[] @relation("WalletIncomingTransactions")
+  ledgerEntries        LedgerEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, currency])
   @@index([userId])
+  @@index([type, currency])
+}
+
+enum WalletTypeEnum {
+  USER
+  SYSTEM
 }
 
 model Transaction {
   id       String @id @default(uuid())
   walletId String
-  wallet   Wallet  @relation("WalletTransactions", fields: [walletId], references: [id], onDelete: Cascade)
+  wallet   Wallet @relation("WalletTransactions", fields: [walletId], references: [id], onDelete: Cascade)
 
   toWalletId String?
   toWallet   Wallet? @relation("WalletIncomingTransactions", fields: [toWalletId], references: [id])
@@ -119,6 +134,12 @@ model Transaction {
   category    TransactionCategoryEnum?
   metadata    Json?
 
+  reversesTransactionId String?      @unique
+  reversesTransaction   Transaction? @relation("TransactionReversal", fields: [reversesTransactionId], references: [id])
+  reversedByTransaction Transaction? @relation("TransactionReversal")
+
+  ledgerEntries LedgerEntry[]
+
   createdAt DateTime @default(now())
 
   @@index([walletId])
@@ -126,6 +147,30 @@ model Transaction {
   @@index([createdAt])
   @@index([type])
   @@index([status])
+}
+
+enum LedgerDirectionEnum {
+  DEBIT
+  CREDIT
+}
+
+model LedgerEntry {
+  id String @id @default(uuid())
+
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  direction LedgerDirectionEnum
+  amount    Decimal             @db.Decimal(20, 8)
+  currency  CurrencyEnum
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+  @@index([transactionId])
 }
 
 model Asset {
@@ -177,9 +222,9 @@ model Card {
   network       String?
   issuer        String?
   cardToken     String?
-  isActive      Boolean  @default(true)
-  isFrozen      Boolean  @default(false)
-  spendingLimit Decimal? @db.Decimal(18, 2)
+  isActive      Boolean      @default(true)
+  isFrozen      Boolean      @default(false)
+  spendingLimit Decimal?     @db.Decimal(18, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -229,6 +274,7 @@ enum TransactionTypeEnum {
   YIELD
   INVESTMENT_BUY
   INVESTMENT_SELL
+  REVERSAL
 }
 
 enum TransactionStatusEnum {
@@ -236,6 +282,7 @@ enum TransactionStatusEnum {
   COMPLETED
   FAILED
   CANCELLED
+  REVERSED
 }
 
 enum TransactionCategoryEnum {
@@ -278,35 +325,35 @@ enum KycStatusEnum {
 }
 
 model Portfolio {
-  id          String        @id @default(uuid())
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name        String
   description String?
   visibility  VisibilityEnum @default(PRIVATE)
 
-  assets      PortfolioAsset[]
+  assets PortfolioAsset[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model PortfolioAsset {
-  id            String        @id @default(uuid())
-  portfolioId   String
-  portfolio     Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
-  symbol        String
-  type          AssetTypeEnum
-  quantity      Decimal       @db.Decimal(18, 8)
-  avgBuyPrice   Decimal       @db.Decimal(18, 2)
-  currency      String        @default("USD")
+  symbol      String
+  type        AssetTypeEnum
+  quantity    Decimal       @db.Decimal(18, 8)
+  avgBuyPrice Decimal       @db.Decimal(18, 2)
+  currency    String        @default("USD")
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([portfolioId])
   @@index([symbol])
@@ -348,45 +395,67 @@ enum BeneficiaryTypeEnum {
 }
 
 model Beneficiary {
-  id              String               @id @default(uuid())
-  userId          String
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   alias           String
   beneficiaryType BeneficiaryTypeEnum
   accountNumber   String
   bankName        String?
   currency        CurrencyEnum
-  country         String               @default("AR")
+  country         String              @default("AR")
   documentType    String?
   documentNumber  String?
-  isActive        Boolean              @default(true)
+  isActive        Boolean             @default(true)
 
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, currency])
 }
 
+enum IdempotencyStatusEnum {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
 model IdempotencyRecord {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  userId    String
-  route     String
-  response  Json
-  statusCode Int
-  createdAt DateTime @default(now())
+  id         String                @id @default(uuid())
+  key        String                @unique
+  userId     String
+  route      String
+  status     IdempotencyStatusEnum @default(IN_PROGRESS)
+  response   Json?
+  statusCode Int?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
   @@index([createdAt])
 }
 
+enum ReconciliationStatusEnum {
+  OK
+  DISCREPANCY
+}
+
+model ReconciliationReport {
+  id      String                   @id @default(uuid())
+  runAt   DateTime                 @default(now())
+  status  ReconciliationStatusEnum
+  details Json
+
+  @@index([runAt])
+}
+
 model UserBackupCode {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   code      String
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@unique([userId, code])
   @@index([userId])

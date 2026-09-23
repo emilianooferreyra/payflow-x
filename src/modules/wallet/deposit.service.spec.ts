@@ -3,7 +3,7 @@ import { ConflictException } from "@nestjs/common";
 import { DepositService } from "./deposit.service";
 import { WebhookService } from "../webhook/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { mockPrisma, makeWallet } from "../../common/testing";
+import { mockPrisma, runTransactionsInline, makeWallet } from "../../common/testing";
 import { Prisma } from "../../generated/prisma/client.js";
 
 describe("DepositService", () => {
@@ -17,6 +17,9 @@ describe("DepositService", () => {
     return mockPrisma.wallet.updateMany.mockResolvedValue({ count: affected });
   }
 
+  const uniqueViolation = () =>
+    Object.assign(new Error("Unique constraint failed"), { code: "P2002" });
+
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
@@ -27,15 +30,13 @@ describe("DepositService", () => {
     }).compile();
     service = module.get<DepositService>(DepositService);
     jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
-      fn(mockPrisma),
-    );
+    runTransactionsInline();
     mockWebhookService.dispatch.mockResolvedValue(undefined);
   });
 
   it("should increase balance and create a transaction", async () => {
     const wallet = makeWallet({ balance: new Prisma.Decimal(1000) });
-    mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
+    mockPrisma.wallet.upsert.mockResolvedValue(wallet);
     mockUpdateMany(1);
     mockPrisma.transaction.create.mockResolvedValue({
       id: "tx-1",
@@ -64,11 +65,9 @@ describe("DepositService", () => {
     );
   });
 
-  it("should create wallet on first deposit", async () => {
-    mockPrisma.wallet.findUnique.mockResolvedValue(null);
-    mockPrisma.wallet.create.mockResolvedValue(
-      makeWallet({ balance: new Prisma.Decimal(500) }),
-    );
+  it("should create the wallet on first deposit without a read-then-create race", async () => {
+    const wallet = makeWallet({ balance: new Prisma.Decimal(0) });
+    mockPrisma.wallet.upsert.mockResolvedValue(wallet);
     mockUpdateMany(1);
     mockPrisma.transaction.create.mockResolvedValue({
       id: "tx-1",
@@ -83,18 +82,40 @@ describe("DepositService", () => {
     });
 
     expect(result.type).toBe("DEPOSIT");
+    expect(mockPrisma.wallet.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId_currency: { userId: "user-1", currency: "ARS" } },
+      }),
+    );
+    expect(mockPrisma.wallet.create).not.toHaveBeenCalled();
   });
 
-  it("should retry on optimistic lock conflict", async () => {
-    const wallet = makeWallet({ balance: new Prisma.Decimal(1000) });
-    mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
-    mockUpdateMany(0);
-    mockPrisma.wallet.findUnique.mockResolvedValue(wallet);
+  it("should recover when two concurrent first deposits race on the unique constraint", async () => {
+    const wallet = makeWallet({ balance: new Prisma.Decimal(0) });
+    mockPrisma.wallet.upsert
+      .mockRejectedValueOnce(uniqueViolation())
+      .mockResolvedValue(wallet);
+    mockUpdateMany(1);
     mockPrisma.transaction.create.mockResolvedValue({
       id: "tx-1",
       type: "DEPOSIT",
       amount: "500",
     });
+
+    const result = await service.execute({
+      userId: "user-1",
+      currency: "ARS",
+      amount: "500",
+    });
+
+    expect(result.type).toBe("DEPOSIT");
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("should exhaust retries and throw when the optimistic lock keeps conflicting", async () => {
+    const wallet = makeWallet({ balance: new Prisma.Decimal(1000) });
+    mockPrisma.wallet.upsert.mockResolvedValue(wallet);
+    mockUpdateMany(0);
 
     await expect(
       service.execute({
@@ -103,5 +124,8 @@ describe("DepositService", () => {
         amount: "500",
       }),
     ).rejects.toThrow(ConflictException);
+
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
   });
 });

@@ -48,6 +48,10 @@ jobs:
 
       - run: pnpm prisma generate
 
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
       - run: pnpm test:e2e
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/authdb_test
