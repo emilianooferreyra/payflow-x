@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-} from "@nestjs/common";
+import { ConflictException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { WebhookService } from "../webhook/webhook.service";
 import { DepositInterface } from "./interfaces/wallet.interface";
@@ -24,15 +20,14 @@ export class DepositService {
     validateCurrencyPrecision(currency, decimalAmount);
 
     const transaction = await withOptimisticRetry(this.prisma, async (tx) => {
-      let wallet = await tx.wallet.findUnique({
+      // Prisma's upsert reads before it writes, so two concurrent first deposits
+      // can both miss the row and race on the userId_currency unique constraint.
+      // The loser gets P2002, which withOptimisticRetry retries.
+      const wallet = await tx.wallet.upsert({
         where: { userId_currency: { userId, currency } },
+        create: { userId, currency, balance: 0, version: 1 },
+        update: {},
       });
-
-      if (!wallet) {
-        wallet = await tx.wallet.create({
-          data: { userId, currency, balance: 0, version: 1 },
-        });
-      }
 
       const { count } = await tx.wallet.updateMany({
         where: { id: wallet.id, version: wallet.version },
