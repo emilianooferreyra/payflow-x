@@ -1,23 +1,29 @@
+# Common definition shared by every environment.
+#
+#   docker compose up                                  -> this + docker-compose.override.yml (development)
+#   docker compose -f docker-compose.yml \
+#                  -f docker-compose.prod.yml up       -> this + production
+#
+# Anything environment specific lives in an overlay. Note that Compose *merges*
+# list fields such as `volumes` and `ports` instead of replacing them, so a dev
+# only bind mount or published port must never be declared here — it would leak
+# into production.
 services:
-
   app:
     build:
       context: ./
-      target: dev
-    volumes:
-      - ./src:/usr/src/app/src
     ports:
-      - '3000:3000'
+      - "3000:3000"
     depends_on:
       auth-db:
         condition: service_healthy
       auth-redis:
         condition: service_started
     environment:
-      - PORT=${PORT}
+      - PORT=3000
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
-      - DATABASE_URL=postgresql://postgres:123456@auth-db:5432/authdb
-      - REDIS_URL=redis://auth-redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
@@ -37,7 +43,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=123456
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=authdb
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -53,9 +59,6 @@ services:
     restart: always
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
     networks:
       - backend
 
