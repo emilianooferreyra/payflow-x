@@ -1,0 +1,22 @@
+# Development overlay. Compose loads this automatically on a bare
+# `docker compose up`, so the easiest command is also the safe one: it can never
+# start the production configuration by accident.
+services:
+  app:
+    build:
+      target: dev
+    volumes:
+      - ./src:/usr/src/app/src
+    environment:
+      - DATABASE_URL=postgresql://postgres:123456@auth-db:5432/authdb
+      - REDIS_URL=redis://auth-redis:6379
+
+  auth-db:
+    environment:
+      - POSTGRES_PASSWORD=123456
+
+  auth-redis:
+    command: redis-server --appendonly yes
+    # Published for local tooling only. Never in production.
+    ports:
+      - "6379:6379"

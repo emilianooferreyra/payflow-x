@@ -29,6 +29,26 @@ pnpm prisma:seed
 pnpm start:dev
 ```
 
+### Docker environments
+
+Compose is split into a shared base and one overlay per environment, so the two
+cannot drift apart:
+
+```bash
+# Development — docker-compose.override.yml is picked up automatically
+docker compose up
+
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+The bare command is the development one on purpose: the easiest thing to type
+should never be the one that starts a production configuration.
+
+The production image runs `prisma migrate deploy` before it accepts traffic, and
+refuses to boot when `RECAPTCHA_SECRET_KEY` is unset — the guard treats a missing
+key in production as a misconfiguration rather than something to degrade past.
+
 Then visit `http://localhost:3000/api/docs` for Swagger.
 
 ## Architecture

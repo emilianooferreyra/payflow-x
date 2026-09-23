@@ -18,10 +18,10 @@ RUN apk add --no-cache python3 make g++ && \
 # ============================================
 FROM base AS build
 
-COPY prisma ./prisma
-RUN npx prisma generate
-
 COPY . .
+# Generated after the source copy so the client always matches this schema,
+# never a stale copy carried in from the host.
+RUN npx prisma generate
 RUN pnpm run build
 
 # ============================================
@@ -54,6 +54,9 @@ COPY --from=build --chown=appuser:appgroup /usr/src/app/dist ./dist
 COPY --from=prod-deps --chown=appuser:appgroup /usr/src/app/node_modules ./node_modules
 COPY --from=build --chown=appuser:appgroup /usr/src/app/package.json ./
 COPY --from=build --chown=appuser:appgroup /usr/src/app/prisma ./prisma
+# The datasource block in schema.prisma carries no url — Prisma 7 reads it
+# from this config, so migrate deploy cannot run without it.
+COPY --from=build --chown=appuser:appgroup /usr/src/app/prisma.config.ts ./
 COPY --chown=appuser:appgroup docker-entrypoint.sh /usr/local/bin/
 
 USER appuser
@@ -61,7 +64,7 @@ USER appuser
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/v1/health || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 

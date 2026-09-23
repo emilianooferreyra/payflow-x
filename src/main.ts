@@ -76,6 +76,10 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
+  // No host argument on purpose: Node then binds `::` in dual-stack mode and
+  // accepts both IPv6 and IPv4. Pinning 0.0.0.0 would make the socket
+  // IPv4-only, and anything resolving localhost to ::1 — busybox wget in the
+  // container health check, for one — would get connection refused.
   await app.listen(envs.PORT);
   logger.log(`App running on PORT: ${envs.PORT}`);
   logger.log(`Swagger docs at http://localhost:${envs.PORT}/api/docs`);
