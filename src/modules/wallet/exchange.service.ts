@@ -16,7 +16,12 @@ import { assertFound } from "../../common/utils/assert-found";
 export class ExchangeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ userId, fromCurrency, toCurrency, amount }: ExchangeInterface) {
+  async execute({
+    userId,
+    fromCurrency,
+    toCurrency,
+    amount,
+  }: ExchangeInterface) {
     if (fromCurrency === toCurrency) {
       throw new BadRequestException(
         "Source and destination currency must differ",
@@ -27,25 +32,24 @@ export class ExchangeService {
     validateCurrencyPrecision(fromCurrency, decimalAmount);
 
     return withOptimisticRetry(this.prisma, async (tx) => {
-      const [sourceWallet, targetWallet, exchangeRate] = await Promise.all([
-        tx.wallet.findUnique({
-          where: { userId_currency: { userId, currency: fromCurrency } },
-        }),
-        tx.wallet.findUnique({
-          where: { userId_currency: { userId, currency: toCurrency } },
-        }),
-        tx.exchangeRate.findFirst({
-          where: { fromCurrency, toCurrency },
-          orderBy: { date: "desc" },
-        }),
-      ]);
+      // An interactive transaction runs on a single connection, so Promise.all
+      // buys no parallelism here — it only hides the order of the queries.
+      const sourceWallet = await tx.wallet.findUnique({
+        where: { userId_currency: { userId, currency: fromCurrency } },
+      });
+      const targetWallet = await tx.wallet.findUnique({
+        where: { userId_currency: { userId, currency: toCurrency } },
+      });
+      const exchangeRate = await tx.exchangeRate.findFirst({
+        where: { fromCurrency, toCurrency },
+        orderBy: { date: "desc" },
+      });
 
       assertFound(sourceWallet, `Wallet ${fromCurrency}`);
       assertFound(targetWallet, `Wallet ${toCurrency}`);
       assertFound(exchangeRate, `Exchange rate ${fromCurrency}/${toCurrency}`);
 
-      const rateAge =
-        Date.now() - new Date(exchangeRate.date).getTime();
+      const rateAge = Date.now() - new Date(exchangeRate.date).getTime();
       if (rateAge > envs.EXCHANGE_RATE_MAX_AGE_MS) {
         throw new UnprocessableEntityException(
           `Exchange rate for ${fromCurrency}/${toCurrency} is stale. Please retry.`,
@@ -59,29 +63,35 @@ export class ExchangeService {
       const rate = new Prisma.Decimal(exchangeRate.rate);
       const received = decimalAmount.times(rate);
 
-      const sourceUpdate = tx.wallet.updateMany({
-        where: { id: sourceWallet.id, version: sourceWallet.version },
-        data: {
-          balance: { decrement: decimalAmount },
-          version: { increment: 1 },
+      // Two opposite exchanges (USD->ARS and ARS->USD) would take these row locks
+      // in reverse order and deadlock. Sorting by wallet id makes the acquisition
+      // order the same for every caller.
+      const legs = [
+        {
+          wallet: sourceWallet,
+          data: {
+            balance: { decrement: decimalAmount },
+            version: { increment: 1 },
+          },
         },
-      });
-
-      const targetUpdate = tx.wallet.updateMany({
-        where: { id: targetWallet.id, version: targetWallet.version },
-        data: {
-          balance: { increment: received },
-          version: { increment: 1 },
+        {
+          wallet: targetWallet,
+          data: {
+            balance: { increment: received },
+            version: { increment: 1 },
+          },
         },
-      });
+      ].sort((a, b) => a.wallet.id.localeCompare(b.wallet.id));
 
-      const [sourceResult, targetResult] = await Promise.all([
-        sourceUpdate,
-        targetUpdate,
-      ]);
+      for (const { wallet, data } of legs) {
+        const { count } = await tx.wallet.updateMany({
+          where: { id: wallet.id, version: wallet.version },
+          data,
+        });
 
-      if (sourceResult.count === 0 || targetResult.count === 0) {
-        throw new ConflictException("Optimistic lock conflict");
+        if (count === 0) {
+          throw new ConflictException("Optimistic lock conflict");
+        }
       }
 
       const transaction = await tx.transaction.create({
@@ -93,7 +103,11 @@ export class ExchangeService {
           currency: fromCurrency,
           status: "COMPLETED",
           description: `Conversión ${fromCurrency} → ${toCurrency}`,
-          metadata: { rate: rate.toString(), received: received.toString(), toCurrency },
+          metadata: {
+            rate: rate.toString(),
+            received: received.toString(),
+            toCurrency,
+          },
         },
       });
 
