@@ -28,6 +28,11 @@ export const envSchema = z
     RECAPTCHA_SECRET_KEY: z.string().default(""),
     RECAPTCHA_THRESHOLD: z.string().default("0.5"),
     REFRESH_GRACE_PERIOD_MS: z.string().default("2000").transform(Number),
+    // How long a money transaction may wait for a pooled connection, and how
+    // long it may hold one. Prisma's implicit 2s/5s are left explicit here so
+    // they can be tuned per environment without a code change.
+    DB_TRANSACTION_MAX_WAIT_MS: z.string().default("5000").transform(Number),
+    DB_TRANSACTION_TIMEOUT_MS: z.string().default("10000").transform(Number),
     CSRF_SECRET: z.string().default("csrf-secret-dev"),
     CSRF_ENABLED: z
       .string()

@@ -1,6 +1,7 @@
 import { ConflictException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
-import type { Prisma } from "../../../generated/prisma/client.js";
+import { Prisma } from "../../../generated/prisma/client.js";
+import { envs } from "../../../config";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 5;
@@ -17,6 +18,19 @@ const RETRYABLE_SQL_STATES = new Set(["40001", "40P01"]);
  * so concurrent first-time inserts race and all but one fail with P2002.
  */
 const RETRYABLE_PRISMA_CODES = new Set(["P2002"]);
+
+/**
+ * Money transactions run at READ COMMITTED on purpose. The `version` column
+ * turns every balance write into a compare-and-swap, which is what closes the
+ * check-then-act window; SERIALIZABLE would add serialization failures and
+ * throughput cost without making the balance any safer. Stated explicitly so
+ * the choice is visible rather than inherited from the Postgres default.
+ */
+const TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+  maxWait: envs.DB_TRANSACTION_MAX_WAIT_MS,
+  timeout: envs.DB_TRANSACTION_TIMEOUT_MS,
+} as const;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -61,7 +75,7 @@ export async function withOptimisticRetry<T>(
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      return await prisma.$transaction(fn);
+      return await prisma.$transaction(fn, TRANSACTION_OPTIONS);
     } catch (error) {
       lastError = error;
 

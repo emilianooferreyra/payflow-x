@@ -3,10 +3,19 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { Prisma } from "../../../generated/prisma/client.js";
 import { withOptimisticRetry } from "./with-optimistic-retry";
 
 type TransactionRunner = (tx: unknown) => Promise<unknown>;
-type TransactionMock = jest.Mock<Promise<unknown>, [TransactionRunner]>;
+type TransactionOptions = {
+  maxWait: number;
+  timeout: number;
+  isolationLevel: Prisma.TransactionIsolationLevel;
+};
+type TransactionMock = jest.Mock<
+  Promise<unknown>,
+  [TransactionRunner, TransactionOptions]
+>;
 
 const makePrisma = (transaction: TransactionMock) =>
   ({ $transaction: transaction }) as unknown as PrismaService;
@@ -24,6 +33,18 @@ const prismaError = (code: string) =>
   Object.assign(new Error("prisma error"), { code });
 
 describe("withOptimisticRetry", () => {
+  it("runs money transactions at an explicit isolation level with bounded waits", async () => {
+    const transaction = jest.fn().mockResolvedValue("ok");
+
+    await withOptimisticRetry(makePrisma(transaction), async () => "ok");
+
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      maxWait: expect.any(Number),
+      timeout: expect.any(Number),
+    });
+  });
+
   it("returns the result without retrying when the transaction succeeds", async () => {
     const transaction = jest.fn().mockResolvedValue("ok");
 
