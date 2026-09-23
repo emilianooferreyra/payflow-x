@@ -13,4 +13,4 @@ test/
 .opencode/
 openspec/
 docs/
-eslint.config.mjs
+eslint.config.mjs.pnpm-store
