@@ -65,3 +65,7 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /src/generated/prisma
+
+# pnpm content-addressable store. Lives globally (see `pnpm store path`);
+# a copy here only appears when pnpm cannot hard-link to the home store.
+.pnpm-store/
