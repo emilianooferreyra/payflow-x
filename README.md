@@ -113,7 +113,7 @@ pnpm webhook:demo       # Runs local webhook receiver + deposit flow
 
 ## Environment
 
-Copy `.env.example` to `.env`. Required variables:
+Copy `.env.template` to `.env`. Required variables:
 
 | Variable | Description |
 |---|---|
@@ -122,6 +122,19 @@ Copy `.env.example` to `.env`. Required variables:
 | `JWT_ACCESS_SECRET` | Access token signing key |
 | `JWT_REFRESH_SECRET` | Refresh token signing key |
 | `FRONTEND_URL` | CORS origin (default: `http://localhost:3001`) |
+
+Optional, for tuning the money flow:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_TRANSACTION_MAX_WAIT_MS` | `5000` | How long a money transaction waits for a pooled connection |
+| `DB_TRANSACTION_TIMEOUT_MS` | `10000` | How long it may hold that connection before rolling back |
+| `REFRESH_GRACE_PERIOD_MS` | `2000` | Window where a superseded refresh token is still accepted |
+| `EXCHANGE_RATE_MAX_AGE_MS` | `300000` | Age past which a quote is rejected as stale |
+
+The schema in `src/config/envs.ts` validates on import and throws, so a missing
+required variable fails the process at boot rather than at first use. Tests get
+safe defaults from `jest.env.setup.js` and need no `.env`.
 
 ## Deployment
 
