@@ -4,7 +4,7 @@ import {
 } from "@nestjs/common";
 import { InvestmentService } from "./investment.service";
 import {
-  mockPrisma,
+  mockPrisma, runTransactionsInline,
   createTestingModule,
   makeWallet,
 } from "../../common/testing";
@@ -16,9 +16,7 @@ describe("InvestmentService", () => {
     const module = await createTestingModule([InvestmentService]);
     service = module.get<InvestmentService>(InvestmentService);
     jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
-      fn(mockPrisma),
-    );
+    runTransactionsInline();
   });
 
   describe("getAssets", () => {

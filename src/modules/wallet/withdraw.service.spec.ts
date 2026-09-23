@@ -6,7 +6,7 @@ import {
 import { WithdrawService } from "./withdraw.service";
 import { WebhookService } from "../webhook/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { mockPrisma, makeWallet } from "../../common/testing";
+import { mockPrisma, runTransactionsInline, makeWallet } from "../../common/testing";
 import { Prisma } from "../../generated/prisma/client.js";
 
 describe("WithdrawService", () => {
@@ -30,9 +30,7 @@ describe("WithdrawService", () => {
     }).compile();
     service = module.get<WithdrawService>(WithdrawService);
     jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
-      fn(mockPrisma),
-    );
+    runTransactionsInline();
     mockWebhookService.dispatch.mockResolvedValue(undefined);
   });
 
@@ -65,7 +63,7 @@ describe("WithdrawService", () => {
     await expect(
       service.execute({
         userId: wallet.userId,
-        currency: "ARS" as any,
+        currency: "ARS",
         amount: "500",
       }),
     ).rejects.toThrow(UnprocessableEntityException);
@@ -77,7 +75,7 @@ describe("WithdrawService", () => {
     await expect(
       service.execute({
         userId: "invalid",
-        currency: "ARS" as any,
+        currency: "ARS",
         amount: "500",
       }),
     ).rejects.toThrow(NotFoundException);

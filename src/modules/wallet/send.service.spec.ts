@@ -6,7 +6,7 @@ import {
 import { SendService } from "./send.service";
 import { WebhookService } from "../webhook/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { mockPrisma, makeWallet, makeBeneficiary } from "../../common/testing";
+import { mockPrisma, runTransactionsInline, makeWallet, makeBeneficiary } from "../../common/testing";
 import { Prisma } from "../../generated/prisma/client.js";
 
 describe("SendService", () => {
@@ -26,9 +26,7 @@ describe("SendService", () => {
     }).compile();
     service = module.get<SendService>(SendService);
     jest.resetAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: any) =>
-      fn(mockPrisma),
-    );
+    runTransactionsInline();
     mockWebhookService.dispatch.mockResolvedValue(undefined);
   });
 
