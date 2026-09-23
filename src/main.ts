@@ -49,7 +49,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("PayFlow API")
+    .setTitle("PayPayPay API")
     .setDescription(
       "Fintech platform API — multi-currency wallets, investments, KYC and exchange rates. Inspired by Takenos, Belo and Lemon Cash.",
     )
