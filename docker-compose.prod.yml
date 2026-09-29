@@ -13,3 +13,6 @@ services:
 
   auth-redis:
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    # Lets the base healthcheck's redis-cli authenticate against requirepass.
+    environment:
+      - REDISCLI_AUTH=${REDIS_PASSWORD}
