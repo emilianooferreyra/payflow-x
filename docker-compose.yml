@@ -18,7 +18,7 @@ services:
       auth-db:
         condition: service_healthy
       auth-redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       - PORT=3000
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
@@ -37,7 +37,7 @@ services:
 
   auth-db:
     container_name: auth-db
-    image: postgres:16.2
+    image: postgres:16
     restart: always
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -55,10 +55,17 @@ services:
 
   auth-redis:
     container_name: auth-redis
-    image: redis:7.2
+    image: redis:7
     restart: always
     volumes:
       - redis_data:/data
+    # Piped to grep because a NOAUTH reply is still a reply: only PONG counts.
+    # Production authenticates through REDISCLI_AUTH (see the prod overlay).
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - backend
 

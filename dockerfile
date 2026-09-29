@@ -63,8 +63,10 @@ USER appuser
 
 EXPOSE 3000
 
+# Liveness only: this check decides restarts, so it must not depend on Postgres
+# or Redis. Dependency readiness is served by /api/v1/health/ready.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/v1/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/v1/health/live || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
