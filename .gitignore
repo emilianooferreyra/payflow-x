@@ -2,8 +2,6 @@
 /dist
 /node_modules
 /build
-/docs
-/openspec
 /.agents
 /.claude
 /.opencode

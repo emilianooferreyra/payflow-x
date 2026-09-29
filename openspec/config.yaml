@@ -1,0 +1,34 @@
+schema: spec-driven
+
+context: |
+  Tech stack: NestJS 11, TypeScript, Prisma 7, PostgreSQL, Redis, Zod, class-validator
+  Architecture: Modular monolith with 14 domain modules, JWT auth with refresh rotation + 2FA + Google OAuth
+  Patterns: Atomic DB transactions, Passport strategies, Guards, DTOs with class-validator, Swagger/OpenAPI
+  Domain: Multi-currency fintech (ARS, USD, USDT, BRL) — wallets, investments, cards, KYC, exchange
+  Testing: Jest with ts-jest, supertest for e2e, currently ~0% coverage
+  Style: ESLint + Prettier, conventional commits, Prettier for formatting
+
+strict_tdd: false
+
+rules:
+  proposal:
+    - Include impact assessment for each change
+    - Identify affected modules
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include decisions with alternatives considered
+    - Document risks with mitigations
+  tasks:
+    - Keep tasks small enough to complete in one session
+    - Group by dependency order
+  apply:
+    - Follow existing NestJS conventions
+    - Load nestjs-best-practices skill before implementation
+    - Run tsc --noEmit and tests after each task group
+  verify:
+    - Run tests after implementation
+    - Verify against every spec scenario
+  archive:
+    - Warn before destructive deltas
