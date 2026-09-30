@@ -36,7 +36,11 @@ export class InvalidAmountError extends Error {
 }
 
 export class PrecisionError extends Error {
-  constructor(currency: Currency, maxDecimals: number, raw: string) {
+  constructor(
+    readonly currency: Currency,
+    readonly maxDecimals: number,
+    raw: string,
+  ) {
     super(
       `${currency} supports at most ${maxDecimals} decimal place${maxDecimals === 1 ? "" : "s"}, got "${raw}"`,
     );
@@ -89,6 +93,21 @@ export class Money {
     }
 
     return new Money(amount, currency);
+  }
+
+  /**
+   * Rebuilds a value that was already persisted. Unlike `of`, it does not
+   * enforce the currency's precision: storage can hold amounts written before
+   * that rule existed (for example the FX rounding that left 1.0005 USD), and
+   * refusing to load them would make a wallet that works today fail on read.
+   * Use it only at the persistence boundary, never for client input.
+   */
+  static restore(rawAmount: string, currency: Currency): Money {
+    if (!AMOUNT_PATTERN.test(rawAmount)) {
+      throw new InvalidAmountError(rawAmount);
+    }
+
+    return new Money(new Decimal(rawAmount), currency);
   }
 
   static zero(currency: Currency): Money {
