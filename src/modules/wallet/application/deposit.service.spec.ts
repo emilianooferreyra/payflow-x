@@ -1,18 +1,14 @@
 import { BadRequestException, ConflictException } from "@nestjs/common";
-import { WebhookService } from "../../webhook/webhook.service";
 import { InMemoryUnitOfWork } from "../testing/in-memory-unit-of-work";
 import { DepositService } from "./deposit.service";
 
 describe("DepositService", () => {
   let uow: InMemoryUnitOfWork;
   let service: DepositService;
-  const webhooks = { dispatch: jest.fn() };
 
   beforeEach(() => {
-    jest.resetAllMocks();
-    webhooks.dispatch.mockResolvedValue(undefined);
     uow = new InMemoryUnitOfWork();
-    service = new DepositService(uow, webhooks as unknown as WebhookService);
+    service = new DepositService(uow);
   });
 
   it("increases the balance and records a completed DEPOSIT", async () => {
@@ -67,7 +63,7 @@ describe("DepositService", () => {
 
     expect(uow.walletOf("u1", "ARS")?.balance.toString()).toBe("1000.00");
     expect(uow.transactions).toHaveLength(0);
-    expect(webhooks.dispatch).not.toHaveBeenCalled();
+    expect(uow.outboxEvents).toHaveLength(0);
   });
 
   it("rolls the balance back when the transaction record cannot be written", async () => {
@@ -79,7 +75,7 @@ describe("DepositService", () => {
     ).rejects.toThrow("insert failed");
 
     expect(uow.walletOf("u1", "ARS")?.balance.toString()).toBe("1000.00");
-    expect(webhooks.dispatch).not.toHaveBeenCalled();
+    expect(uow.outboxEvents).toHaveLength(0);
   });
 
   it("rejects more decimals than the currency allows before touching anything", async () => {
@@ -88,37 +84,50 @@ describe("DepositService", () => {
     ).rejects.toThrow(BadRequestException);
 
     expect(uow.walletOf("u1", "ARS")).toBeUndefined();
-    expect(webhooks.dispatch).not.toHaveBeenCalled();
+    expect(uow.outboxEvents).toHaveLength(0);
   });
 
-  it("dispatches deposit.confirmed with the raw amount after the commit", async () => {
-    const result = await service.execute({
-      userId: "u1",
-      currency: "ARS",
-      amount: "500",
-    });
-
-    expect(webhooks.dispatch).toHaveBeenCalledWith({
-      type: "deposit.confirmed",
-      data: {
-        walletId: result.walletId,
+  describe("outbox", () => {
+    it("enqueues deposit.confirmed with the raw amount", async () => {
+      const result = await service.execute({
         userId: "u1",
-        amount: "500",
         currency: "ARS",
-        transactionId: result.id,
-      },
+        amount: "500",
+      });
+
+      expect(uow.outboxEvents).toEqual([
+        {
+          type: "deposit.confirmed",
+          walletId: result.walletId,
+          data: {
+            walletId: result.walletId,
+            userId: "u1",
+            amount: "500",
+            currency: "ARS",
+            transactionId: result.id,
+          },
+        },
+      ]);
     });
-  });
 
-  it("still succeeds when the webhook dispatch fails", async () => {
-    webhooks.dispatch.mockRejectedValue(new Error("endpoint down"));
+    it("enqueues exactly one event per deposit", async () => {
+      await service.execute({ userId: "u1", currency: "ARS", amount: "1" });
+      await service.execute({ userId: "u1", currency: "ARS", amount: "2" });
 
-    const result = await service.execute({
-      userId: "u1",
-      currency: "ARS",
-      amount: "500",
+      expect(uow.outboxEvents).toHaveLength(2);
     });
 
-    expect(result.type).toBe("DEPOSIT");
+    it("rolls back the balance and the record when the event cannot be enqueued", async () => {
+      uow.seedWallet({ userId: "u1", currency: "ARS", balance: "1000" });
+      uow.injectOutboxFailure(new Error("outbox down"));
+
+      await expect(
+        service.execute({ userId: "u1", currency: "ARS", amount: "500" }),
+      ).rejects.toThrow("outbox down");
+
+      expect(uow.walletOf("u1", "ARS")?.balance.toString()).toBe("1000.00");
+      expect(uow.transactions).toHaveLength(0);
+      expect(uow.outboxEvents).toHaveLength(0);
+    });
   });
 });
