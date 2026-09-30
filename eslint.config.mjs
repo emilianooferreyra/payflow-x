@@ -41,6 +41,32 @@ export default tseslint.config(
     },
   },
   {
+    // Hexagonal boundary: the inner layers must not know the database exists.
+    files: [
+      'src/modules/wallet/domain/**/*.ts',
+      'src/modules/wallet/application/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/generated/prisma',
+                '**/generated/prisma/*',
+                '@prisma/*',
+                '**/prisma/prisma.service',
+              ],
+              message:
+                'domain/ and application/ must not import Prisma. Depend on a port and implement it in infrastructure/.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/**/*.spec.ts', 'e2e/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',

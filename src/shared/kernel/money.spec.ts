@@ -48,6 +48,50 @@ describe("Money", () => {
     });
   });
 
+  describe("precision error details", () => {
+    it("exposes the currency and the allowed decimals so callers can word their own message", () => {
+      let caught: unknown;
+      try {
+        Money.of("10.123", "ARS");
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeInstanceOf(PrecisionError);
+      expect((caught as PrecisionError).currency).toBe("ARS");
+      expect((caught as PrecisionError).maxDecimals).toBe(2);
+    });
+  });
+
+  describe("restoring a stored value", () => {
+    // A balance written before precision was enforced (for example the FX
+    // rounding that left 1.0005 USD) must still be readable, or a wallet that
+    // works today would start failing the moment it is loaded.
+    it("keeps precision that Money.of would reject", () => {
+      expect(() => Money.of("1.0005", "USD")).toThrow(PrecisionError);
+
+      const legacy = Money.restore("1.0005", "USD");
+
+      expect(legacy.isGreaterThanOrEqual(Money.of("1.00", "USD"))).toBe(true);
+      expect(legacy.isLessThan(Money.of("1.01", "USD"))).toBe(true);
+    });
+
+    it("compares exactly, without rounding to the currency precision", () => {
+      const legacy = Money.restore("1.0005", "USD");
+
+      expect(legacy.isLessThan(Money.of("1.00", "USD"))).toBe(false);
+      expect(
+        Money.restore("1.004", "USD").isLessThan(Money.of("1.00", "USD")),
+      ).toBe(false);
+    });
+
+    it("still rejects input that is not a plain decimal", () => {
+      for (const bad of ["", "abc", "1e400", "NaN"]) {
+        expect(() => Money.restore(bad, "USD")).toThrow(InvalidAmountError);
+      }
+    });
+  });
+
   describe("arithmetic", () => {
     it("adds and subtracts within the same currency", () => {
       const balance = Money.of("1000.00", "ARS");
