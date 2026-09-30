@@ -1,57 +1,40 @@
-import { ConflictException, Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { WebhookService } from "../webhook/webhook.service";
-import { DepositInterface } from "./interfaces/wallet.interface";
-import { Prisma } from "../../generated/prisma/client.js";
-import { withOptimisticRetry } from "./utils/with-optimistic-retry";
-import { validateCurrencyPrecision } from "./utils/validate-currency-precision";
+import { ConflictException, Inject, Injectable, Logger } from "@nestjs/common";
+import { WebhookService } from "../../webhook/webhook.service";
+import { DepositInterface } from "../interfaces/wallet.interface";
+import { UNIT_OF_WORK } from "./ports/unit-of-work.port";
+import type { UnitOfWork } from "./ports/unit-of-work.port";
+import { toMoney } from "./to-money";
 
 @Injectable()
 export class DepositService {
   private readonly logger = new Logger(DepositService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     private readonly webhookService: WebhookService,
   ) {}
 
   async execute({ userId, currency, amount, description }: DepositInterface) {
-    const decimalAmount = new Prisma.Decimal(amount);
-    validateCurrencyPrecision(currency, decimalAmount);
+    const money = toMoney(amount, currency);
 
-    const transaction = await withOptimisticRetry(this.prisma, async (tx) => {
-      // Prisma's upsert reads before it writes, so two concurrent first deposits
-      // can both miss the row and race on the userId_currency unique constraint.
-      // The loser gets P2002, which withOptimisticRetry retries.
-      const wallet = await tx.wallet.upsert({
-        where: { userId_currency: { userId, currency } },
-        create: { userId, currency, balance: 0, version: 1 },
-        update: {},
-      });
+    const transaction = await this.unitOfWork.run(
+      async ({ wallets, transactions }) => {
+        const wallet = await wallets.findOrCreateEmpty(userId, currency);
 
-      const { count } = await tx.wallet.updateMany({
-        where: { id: wallet.id, version: wallet.version },
-        data: {
-          balance: { increment: decimalAmount },
-          version: { increment: 1 },
-        },
-      });
+        const applied = await wallets.credit(wallet.id, wallet.version, money);
+        if (!applied) {
+          throw new ConflictException("Optimistic lock conflict");
+        }
 
-      if (count === 0) {
-        throw new ConflictException("Optimistic lock conflict");
-      }
-
-      return tx.transaction.create({
-        data: {
+        return transactions.create({
           walletId: wallet.id,
           type: "DEPOSIT",
-          amount: decimalAmount,
-          currency,
           status: "COMPLETED",
+          amount: money,
           description: description ?? `Depósito ${currency}`,
-        },
-      });
-    });
+        });
+      },
+    );
 
     await this.webhookService
       .dispatch({
@@ -64,7 +47,7 @@ export class DepositService {
           transactionId: transaction.id,
         },
       })
-      .catch((err) =>
+      .catch((err: Error) =>
         this.logger.warn(
           `Webhook dispatch failed for deposit ${transaction.id}: ${err.message}`,
         ),

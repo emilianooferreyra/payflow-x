@@ -1,68 +1,61 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { WebhookService } from "../webhook/webhook.service";
-import { SendInterface } from "./interfaces/wallet.interface";
-import { Prisma } from "../../generated/prisma/client.js";
-import { withOptimisticRetry } from "./utils/with-optimistic-retry";
-import { validateCurrencyPrecision } from "./utils/validate-currency-precision";
-import { assertFound } from "../../common/utils/assert-found";
+import { assertFound } from "../../../common/utils/assert-found";
+import { WebhookService } from "../../webhook/webhook.service";
+import { SendInterface } from "../interfaces/wallet.interface";
+import { BENEFICIARY_READER } from "./ports/beneficiary.reader";
+import type { BeneficiaryReader } from "./ports/beneficiary.reader";
+import { UNIT_OF_WORK } from "./ports/unit-of-work.port";
+import type { UnitOfWork } from "./ports/unit-of-work.port";
+import { toMoney } from "./to-money";
 
 @Injectable()
 export class SendService {
   private readonly logger = new Logger(SendService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
+    @Inject(BENEFICIARY_READER)
+    private readonly beneficiaries: BeneficiaryReader,
     private readonly webhookService: WebhookService,
   ) {}
 
   async execute({ userId, beneficiaryId, amount }: SendInterface) {
-    const beneficiary = await this.prisma.beneficiary.findFirst({
-      where: { id: beneficiaryId, userId, isActive: true },
-    });
+    const beneficiary = await this.beneficiaries.findActive(
+      userId,
+      beneficiaryId,
+    );
 
     assertFound(beneficiary, "Beneficiary");
 
-    const decimalAmount = new Prisma.Decimal(amount);
-    validateCurrencyPrecision(beneficiary.currency, decimalAmount);
+    const currency = beneficiary.currency;
+    const money = toMoney(amount, currency);
 
-    const transaction = await withOptimisticRetry(this.prisma, async (tx) => {
-      const wallet = await tx.wallet.findUnique({
-        where: {
-          userId_currency: { userId, currency: beneficiary.currency },
-        },
-      });
+    const transaction = await this.unitOfWork.run(
+      async ({ wallets, transactions }) => {
+        const wallet = await wallets.findByUserAndCurrency(userId, currency);
 
-      assertFound(wallet, `Wallet ${beneficiary.currency}`);
+        assertFound(wallet, `Wallet ${currency}`);
 
-      if (wallet.balance.lessThan(decimalAmount)) {
-        throw new UnprocessableEntityException("Insufficient balance");
-      }
+        if (wallet.balance.isLessThan(money)) {
+          throw new UnprocessableEntityException("Insufficient balance");
+        }
 
-      const { count } = await tx.wallet.updateMany({
-        where: { id: wallet.id, version: wallet.version },
-        data: {
-          balance: { decrement: decimalAmount },
-          version: { increment: 1 },
-        },
-      });
+        const applied = await wallets.debit(wallet.id, wallet.version, money);
+        if (!applied) {
+          throw new ConflictException("Optimistic lock conflict");
+        }
 
-      if (count === 0) {
-        throw new ConflictException("Optimistic lock conflict");
-      }
-
-      return tx.transaction.create({
-        data: {
+        return transactions.create({
           walletId: wallet.id,
           type: "TRANSFER",
-          amount: decimalAmount,
-          currency: beneficiary.currency,
           status: "COMPLETED",
+          amount: money,
           description: `Envío a ${beneficiary.alias}`,
           metadata: {
             beneficiaryId: beneficiary.id,
@@ -71,9 +64,9 @@ export class SendService {
             accountNumber: beneficiary.accountNumber,
             bankName: beneficiary.bankName,
           },
-        },
-      });
-    });
+        });
+      },
+    );
 
     await this.webhookService
       .dispatch({
@@ -82,11 +75,11 @@ export class SendService {
           walletId: transaction.walletId,
           userId,
           amount,
-          currency: beneficiary.currency,
+          currency,
           transactionId: transaction.id,
         },
       })
-      .catch((err) =>
+      .catch((err: Error) =>
         this.logger.warn(
           `Webhook dispatch failed for send ${transaction.id}: ${err.message}`,
         ),

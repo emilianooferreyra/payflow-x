@@ -1,64 +1,53 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { WebhookService } from "../webhook/webhook.service";
-import { WithdrawInterface } from "./interfaces/wallet.interface";
-import { Prisma } from "../../generated/prisma/client.js";
-import { withOptimisticRetry } from "./utils/with-optimistic-retry";
-import { validateCurrencyPrecision } from "./utils/validate-currency-precision";
-import { assertFound } from "../../common/utils/assert-found";
+import { assertFound } from "../../../common/utils/assert-found";
+import { WebhookService } from "../../webhook/webhook.service";
+import { WithdrawInterface } from "../interfaces/wallet.interface";
+import { UNIT_OF_WORK } from "./ports/unit-of-work.port";
+import type { UnitOfWork } from "./ports/unit-of-work.port";
+import { toMoney } from "./to-money";
 
 @Injectable()
 export class WithdrawService {
   private readonly logger = new Logger(WithdrawService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     private readonly webhookService: WebhookService,
   ) {}
 
   async execute({ userId, currency, amount, description }: WithdrawInterface) {
-    const decimalAmount = new Prisma.Decimal(amount);
-    validateCurrencyPrecision(currency, decimalAmount);
+    const money = toMoney(amount, currency);
 
-    const transaction = await withOptimisticRetry(this.prisma, async (tx) => {
-      const wallet = await tx.wallet.findUnique({
-        where: { userId_currency: { userId, currency } },
-      });
+    const transaction = await this.unitOfWork.run(
+      async ({ wallets, transactions }) => {
+        const wallet = await wallets.findByUserAndCurrency(userId, currency);
 
-      assertFound(wallet, `Wallet ${currency}`);
+        assertFound(wallet, `Wallet ${currency}`);
 
-      if (wallet.balance.lessThan(decimalAmount)) {
-        throw new UnprocessableEntityException("Insufficient balance");
-      }
+        if (wallet.balance.isLessThan(money)) {
+          throw new UnprocessableEntityException("Insufficient balance");
+        }
 
-      const { count } = await tx.wallet.updateMany({
-        where: { id: wallet.id, version: wallet.version },
-        data: {
-          balance: { decrement: decimalAmount },
-          version: { increment: 1 },
-        },
-      });
+        const applied = await wallets.debit(wallet.id, wallet.version, money);
+        if (!applied) {
+          throw new ConflictException("Optimistic lock conflict");
+        }
 
-      if (count === 0) {
-        throw new ConflictException("Optimistic lock conflict");
-      }
-
-      return tx.transaction.create({
-        data: {
+        return transactions.create({
           walletId: wallet.id,
           type: "WITHDRAWAL",
-          amount: decimalAmount,
-          currency,
           status: "COMPLETED",
+          amount: money,
           description: description ?? `Retiro ${currency}`,
-        },
-      });
-    });
+        });
+      },
+    );
 
     await this.webhookService
       .dispatch({
@@ -71,7 +60,7 @@ export class WithdrawService {
           transactionId: transaction.id,
         },
       })
-      .catch((err) =>
+      .catch((err: Error) =>
         this.logger.warn(
           `Webhook dispatch failed for withdrawal ${transaction.id}: ${err.message}`,
         ),
