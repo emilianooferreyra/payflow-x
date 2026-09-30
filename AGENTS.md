@@ -26,6 +26,7 @@ CI (`.github/workflows/ci.yml`) runs typecheck, unit and e2e. The production ima
 
 - **Every change goes through OpenSpec.** `openspec new change <name>`, then proposal, specs, design and tasks under `openspec/changes/<name>/`. No implementation before the plan is reviewed and approved. When done, archive the change so `openspec/specs/` stays current.
 - **Strict TDD.** Write the failing test first and watch it fail, then the minimum code to pass, then clean up. Run the affected specs while iterating and the full suite before opening a PR.
+- **Build once, at the end.** Do not run `pnpm build` or `docker build` after every change. Run them when the feature or PR is finished. Typecheck and tests are not builds: keep running them while iterating.
 - **One PR per change**, branched from `main` (`feat/`, `fix/`, `chore/`, `docs/`). Conventional commits. Keep unrelated cleanups out of the PR and list them as follow-ups instead.
 
 ## Rules
