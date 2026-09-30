@@ -25,8 +25,10 @@ CI (`.github/workflows/ci.yml`) runs typecheck, unit and e2e. The production ima
 ## Workflow
 
 - **Every change goes through OpenSpec.** `openspec new change <name>`, then proposal, specs, design and tasks under `openspec/changes/<name>/`. No implementation before the plan is reviewed and approved. When done, archive the change so `openspec/specs/` stays current.
-- **Strict TDD.** Write the failing test first and watch it fail, then the minimum code to pass, then clean up. Run the affected specs while iterating and the full suite before opening a PR.
-- **Build once, at the end.** Do not run `pnpm build` or `docker build` after every change. Run them when the feature or PR is finished. Typecheck and tests are not builds: keep running them while iterating.
+- **Strict TDD.** Write the failing test first and watch it fail, then the minimum code to pass, then clean up.
+- **Verify in two tiers.**
+  - *While iterating (after every step):* `pnpm typecheck` and the affected unit specs. Add `pnpm test:e2e` when the change touches the database, transactions or HTTP behavior. Jest does not type-check here, so tests passing does not replace `pnpm typecheck`.
+  - *Always, before opening every PR (once the feature is finished):* `pnpm typecheck`, the full unit suite, `pnpm test:e2e`, then `pnpm build` and `docker build`. All of it must pass; CI then repeats typecheck, unit and e2e. Do not run the build commands after every intermediate change.
 - **One PR per change**, branched from `main` (`feat/`, `fix/`, `chore/`, `docs/`). Conventional commits. Keep unrelated cleanups out of the PR and list them as follow-ups instead.
 
 ## Rules
