@@ -28,7 +28,7 @@ interface EventRow {
 
 function asRecord(value: Prisma.JsonValue): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
+    ? value
     : { value };
 }
 
