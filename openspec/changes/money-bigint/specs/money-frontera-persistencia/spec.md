@@ -43,6 +43,13 @@ Los adaptadores DEBEN (MUST) construir cada `Decimal` de escritura con `toLedger
 - **THEN** la respuesta DEBE ser 400
 - **AND** NO DEBE ser un 500 de la base de datos
 
+#### Scenario: Un depósito que dejaría el saldo por encima del tope
+- **GIVEN** una wallet en ARS con saldo `999999999999.99`
+- **WHEN** se deposita `0.02`
+- **THEN** la respuesta DEBE ser 422 con un mensaje que diga que el saldo resultante superaría el máximo
+- **AND** el saldo DEBE quedar sin cambios
+- **AND** NO DEBE ser un 500 de la base de datos
+
 #### Scenario: Las respuestas existentes no cambian
 - **WHEN** un cliente envía demasiados decimales o un texto que no es un número
 - **THEN** DEBE recibir los mismos 400 y mensajes que antes de este cambio
