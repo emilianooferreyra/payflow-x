@@ -1,4 +1,11 @@
-import { ConflictException, Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from "@nestjs/common";
+import { AmountTooLargeError } from "../../../shared/kernel/money";
 import { WebhookService } from "../../webhook/webhook.service";
 import { DepositInterface } from "../interfaces/wallet.interface";
 import { UNIT_OF_WORK } from "./ports/unit-of-work.port";
@@ -20,6 +27,20 @@ export class DepositService {
     const transaction = await this.unitOfWork.run(
       async ({ wallets, transactions }) => {
         const wallet = await wallets.findOrCreateEmpty(userId, currency);
+
+        // The database increments the balance on its own, so Money never sees
+        // the result. Adding here makes the ceiling a business answer (422)
+        // instead of a numeric overflow from Postgres (500).
+        try {
+          wallet.balance.add(money);
+        } catch (error) {
+          if (error instanceof AmountTooLargeError) {
+            throw new UnprocessableEntityException(
+              "The resulting balance would exceed the maximum allowed",
+            );
+          }
+          throw error;
+        }
 
         const applied = await wallets.credit(wallet.id, wallet.version, money);
         if (!applied) {
